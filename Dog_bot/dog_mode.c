@@ -13,6 +13,8 @@
 void dog_mode_setUp(void)
 {
 	sound_direction_setUp();
+	motor_controller_setUp();
+	mapper_setUp();
 }
 
 void playTheDog(void)
