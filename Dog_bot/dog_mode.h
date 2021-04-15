@@ -1,15 +1,17 @@
 #ifndef DOG_MODE_H
 #define DOG_MODE_H
 
-void dog_mode_setUp();
+#define DIRECTION_TIMEOUT 15 // [sec]
 
-void playTheDog();
+void dog_mode_setUp(void);
 
-void compute_trajectory();
-void follow_trajectory();
+void playTheDog(void);
 
-void led_showDirection();
-void led_showMood();
-void led_standBy();
+void compute_trajectory(void);
+void follow_trajectory(void);
+
+void led_showDirection(void);
+void led_showMood(void);
+void led_standBy(void);
 
 #endif /* DOG_MODE_H */

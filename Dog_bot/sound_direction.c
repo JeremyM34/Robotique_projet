@@ -2,14 +2,12 @@
 #include "hal.h"
 #include <usbcfg.h>
 #include <chprintf.h>
+#include <main.h>
 
 #include <audio/microphone.h>
 #include <sound_direction.h>
 #include <fft.h>
 #include <arm_math.h>
-
-//semaphore
-static BSEMAPHORE_DECL(sendToComputer_sem, TRUE);
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
@@ -39,6 +37,11 @@ static float micBack_output[FFT_SIZE];
 #define FREQ_RIGHT_H		(FREQ_RIGHT+1)
 #define FREQ_BACKWARD_L		(FREQ_BACKWARD-1)
 #define FREQ_BACKWARD_H		(FREQ_BACKWARD+1)
+
+void sound_direction_setUp(void)
+{
+	mic_start(&processAudioData);
+}
 
 /*
 *	Callback called when the demodulation of the four microphones is done.
@@ -112,18 +115,12 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		//sends only one FFT result over 10 for 1 mic to not flood the computer
 		//sends to UART3
 		if(mustSend > 8){
-			//signals to send the result to the computer
-			chBSemSignal(&sendToComputer_sem);
 			mustSend = 0;
 		}
 		nb_samples = 0;
 		mustSend++;
 
 	}
-}
-
-void wait_send_to_computer(void){
-	chBSemWait(&sendToComputer_sem);
 }
 
 float* get_audio_buffer_ptr(BUFFER_NAME_t name){

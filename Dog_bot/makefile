@@ -13,7 +13,9 @@ CSRC += ./main.c \
 		./dog_mode.c \
 		./sound_direction.c \
 		./fft.c \
-
+		./mapper.c \
+		./motor_controller.c \
+		
 #Header folders to include
 INCDIR += 
 

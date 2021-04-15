@@ -2,23 +2,21 @@
 #include "hal.h"
 #include <usbcfg.h>
 #include <chprintf.h>
+#include <main.h>
 #include <math.h>
 
 #include <dog_mode.h>
-#include <arm_math.h>
-#include <arm_const_structs.h>
 #include <sound_direction.h>
+#include <mapper.h>
+#include <motor_controller.h>
 
-#define DIRECTION_TIMEOUT 15 // [sec]
-
-void dog_mode_setUp()
+void dog_mode_setUp(void)
 {
 
 }
 
-void playTheDog()
-{
-	/*
+void playTheDog(void)
+{	/*
 	if(directionAge>DIRECTION_TIMEOUT)
 	{
 		led_showDirection();
@@ -35,28 +33,30 @@ void playTheDog()
 
 ///////////// MOVE ////////////////
 
-void compute_trajectory()
+void compute_trajectory(void)
 {
 
 }
 
-void follow_trajectory()
+void follow_trajectory(void)
 {
-	//goTo();
+	double direction_error = 30;
+	goTo(direction_error);
 }
 
 ///////////// LEDS ////////////////
-void led_showDirection()
+void led_showDirection(void)
 {
 
 }
 
-void led_showMood()
+void led_showMood(void)
 {
 
 }
 
-void led_standBy()
+void led_standBy(void)
 {
 
 }
+
