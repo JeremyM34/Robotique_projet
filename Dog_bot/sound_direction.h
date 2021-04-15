@@ -1,5 +1,5 @@
-#ifndef AUDIO_PROCESSING_H
-#define AUDIO_PROCESSING_H
+#ifndef SOUND_DIRECTION_H
+#define SOUND_DIRECTION_H
 
 
 #define FFT_SIZE 	1024
@@ -30,4 +30,4 @@ void wait_send_to_computer(void);
 */
 float* get_audio_buffer_ptr(BUFFER_NAME_t name);
 
-#endif /* AUDIO_PROCESSING_H */
+#endif /* SOUND_DIRECTION_H */
