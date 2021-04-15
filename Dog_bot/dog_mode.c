@@ -12,7 +12,7 @@
 
 void dog_mode_setUp(void)
 {
-
+	sound_direction_setUp();
 }
 
 void playTheDog(void)
