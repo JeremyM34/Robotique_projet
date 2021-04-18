@@ -19,6 +19,8 @@ typedef enum {
 
 void sound_direction_setUp(void);
 
+void compare_amp(float* amplitude_input, int* order_input);
+
 void processAudioData(int16_t *data, uint16_t num_samples);
 
 /*
