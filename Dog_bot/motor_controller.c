@@ -13,7 +13,7 @@ void motor_controller_setUp(void)
 	motors_init();
 }
 
-void goTo(void)
+void goTo(double direction_error)
 {
 
 }
