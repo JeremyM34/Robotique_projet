@@ -10,7 +10,7 @@
 
 void mapper_setUp(void)
 {
-	proximity_start();
+	//proximity_start();
 	//calibrate_ir();
 	VL53L0X_start();
 }
