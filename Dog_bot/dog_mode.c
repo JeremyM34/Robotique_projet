@@ -6,25 +6,30 @@
 #include <math.h>
 
 #include <dog_mode.h>
-#include <sound_direction.h>
+//#include <sound_direction.h>
 #include <mapper.h>
 #include <motor_controller.h>
 
+static double direction_error = -135;
+
 void dog_mode_setUp(void)
 {
-	sound_direction_setUp();
+	//sound_direction_setUp();
 	motor_controller_setUp();
 	mapper_setUp();
+	goTo(direction_error, 1);
 }
 
 void playTheDog(void)
-{	/*
+{	
+	follow_trajectory();
+	/*
 	if(directionAge>DIRECTION_TIMEOUT)
 	{
 		led_showDirection();
 		led_showMood();
 		compute_trajectory();
-		follow_trajectory()
+		follow_trajectory();
 	}
 	else
 	{
@@ -42,8 +47,7 @@ void compute_trajectory(void)
 
 void follow_trajectory(void)
 {
-	double direction_error = 30;
-	goTo(direction_error);
+	goTo(direction_error, 0);
 }
 
 ///////////// LEDS ////////////////
