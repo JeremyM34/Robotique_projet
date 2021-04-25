@@ -101,10 +101,10 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		if(nb_samples >= (2 * FFT_SIZE)){
 
 			// Copy buffers
-			arm_copy_f32(get_audio_buffer_ptr(RIGHT_CMPLX_INPUT), micRight_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(get_audio_buffer_ptr(LEFT_CMPLX_INPUT), micLeft_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(get_audio_buffer_ptr(FRONT_CMPLX_INPUT), micFront_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(get_audio_buffer_ptr(BACK_CMPLX_INPUT), micBack_cmplx_input_copy, FFT_SIZE);
+			arm_copy_f32(micRight_cmplx_input, micRight_cmplx_input_copy, FFT_SIZE);
+			arm_copy_f32(micLeft_cmplx_input, micLeft_cmplx_input_copy, FFT_SIZE);
+			arm_copy_f32(micFront_cmplx_input, micFront_cmplx_input_copy, FFT_SIZE);
+			arm_copy_f32(micBack_cmplx_input, micBack_cmplx_input_copy, FFT_SIZE);
 
 			/*	FFT processing
 			*
@@ -129,18 +129,18 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			arm_cmplx_mag_f32(micFront_cmplx_input_copy, micFront_output, FFT_SIZE);
 			arm_cmplx_mag_f32(micBack_cmplx_input_copy, micBack_output, FFT_SIZE);
 
-			for(uint16_t j=0; j<=FFT_SIZE; ++j){
-				if(j<=FFT_SIZE/2){
+			for(uint16_t j=0; j<=FFT_SIZE/2; ++j){
+				//if(j<=FFT_SIZE/2){
 					micRight_output[j] = passe_bande(j, micRight_output[j]); // filtrage en fréquence
 					micLeft_output[j] = passe_bande(j, micLeft_output[j]);	//car symetrie, on prend seulement les positions positives
 					micBack_output[j] = passe_bande(j, micBack_output[j]);
 					micFront_output[j] = passe_bande(j, micFront_output[j]);
-
+					/*
 					micRight_output[j] = filtre_amp(micRight_output[j]); // filtrage en amplitude pour eliminer le fond sonore
 					micLeft_output[j] = filtre_amp(micLeft_output[j]);
 					micBack_output[j] = filtre_amp(micBack_output[j]);
 					micFront_output[j] = filtre_amp(micFront_output[j]);
-
+					*/
 					amps_in[0]= micRight_output[j];
 					amps_in[1]= micLeft_output[j];
 					amps_in[2]= micBack_output[j];
@@ -150,7 +150,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 						order_in[n]=n;
 					}
 					compare_amp(amps_in, order_in); // OUTPUT: 2 highest amplitudes with corresponding mic number
-				}
+				//}
 				//sends only one FFT result over 10 for 1 mic to not flood the computer
 				//sends to UART3
 				if(mustSend >= 10){
