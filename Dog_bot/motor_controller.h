@@ -8,6 +8,7 @@ void goTo(double direction, bool flag_new);
 void compute_controls(void);
 void actuate(void);
 
+float front_speed_calc(void);
 float rotation_calc(void);
 void compute_dt(void);
 
