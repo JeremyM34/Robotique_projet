@@ -14,11 +14,6 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micRight_cmplx_input[2 * FFT_SIZE];
 static float micFront_cmplx_input[2 * FFT_SIZE];
 static float micBack_cmplx_input[2 * FFT_SIZE];
-// input buffers copy
-static float micLeft_cmplx_input_copy[2 * FFT_SIZE];
-static float micRight_cmplx_input_copy[2 * FFT_SIZE];
-static float micFront_cmplx_input_copy[2 * FFT_SIZE];
-static float micBack_cmplx_input_copy[2 * FFT_SIZE];
 //Arrays containing the computed magnitude of the complex numbers
 static float micLeft_output[FFT_SIZE];
 static float micRight_output[FFT_SIZE];
@@ -99,23 +94,16 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	}
 
 		if(nb_samples >= (2 * FFT_SIZE)){
-
-			// Copy buffers
-			arm_copy_f32(micRight_cmplx_input, micRight_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(micLeft_cmplx_input, micLeft_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(micFront_cmplx_input, micFront_cmplx_input_copy, FFT_SIZE);
-			arm_copy_f32(micBack_cmplx_input, micBack_cmplx_input_copy, FFT_SIZE);
-
 			/*	FFT processing
 			*
 			*	This FFT function stores the results in the input buffer given.
 			*	This is an "In Place" function.
 			*/
 
-			doFFT_optimized(FFT_SIZE, micRight_cmplx_input_copy);
-			doFFT_optimized(FFT_SIZE, micLeft_cmplx_input_copy);
-			doFFT_optimized(FFT_SIZE, micFront_cmplx_input_copy);
-			doFFT_optimized(FFT_SIZE, micBack_cmplx_input_copy);
+			doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
+			doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
+			doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
+			doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
 
 			/*	Magnitude processing
 			*
@@ -124,10 +112,10 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			*	real numbers.
 			*
 			*/
-			arm_cmplx_mag_f32(micRight_cmplx_input_copy, micRight_output, FFT_SIZE);
-			arm_cmplx_mag_f32(micLeft_cmplx_input_copy, micLeft_output, FFT_SIZE);
-			arm_cmplx_mag_f32(micFront_cmplx_input_copy, micFront_output, FFT_SIZE);
-			arm_cmplx_mag_f32(micBack_cmplx_input_copy, micBack_output, FFT_SIZE);
+			arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
+			arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
+			arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
+			arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
 
 			for(uint16_t j=0; j<=FFT_SIZE/2; ++j){
 				//if(j<=FFT_SIZE/2){
@@ -135,12 +123,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 					micLeft_output[j] = passe_bande(j, micLeft_output[j]);	//car symetrie, on prend seulement les positions positives
 					micBack_output[j] = passe_bande(j, micBack_output[j]);
 					micFront_output[j] = passe_bande(j, micFront_output[j]);
-					/*
-					micRight_output[j] = filtre_amp(micRight_output[j]); // filtrage en amplitude pour eliminer le fond sonore
-					micLeft_output[j] = filtre_amp(micLeft_output[j]);
-					micBack_output[j] = filtre_amp(micBack_output[j]);
-					micFront_output[j] = filtre_amp(micFront_output[j]);
-					*/
+
 					amps_in[0]= micRight_output[j];
 					amps_in[1]= micLeft_output[j];
 					amps_in[2]= micBack_output[j];
@@ -150,16 +133,25 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 						order_in[n]=n;
 					}
 					compare_amp(amps_in, order_in); // OUTPUT: 2 highest amplitudes with corresponding mic number
+
+					filtre_amp(high_amps); // filtrage en amplitude pour eliminer le son
+
+
 				//}
 				//sends only one FFT result over 10 for 1 mic to not flood the computer
 				//sends to UART3
 				if(mustSend >= 10){
-					chprintf((BaseSequentialStream *)&SD3, "Final\n");
-					//chprintf((BaseSequentialStream *)&SD3, "Result\n");
-					for(o=0; o<=1;++o){
-						if(high_amps[o] != 0){
-							chprintf((BaseSequentialStream *)&SD3, "order=%d\n", order_out[o]); //unsigned integer
-							chprintf((BaseSequentialStream *)&SD3, "amplitude=%f\n", high_amps[o]);
+					if((j >= MIN_FREQ) || (j <= MAX_FREQ)){
+
+						//chprintf((BaseSequentialStream *)&SD3, "Final\n");
+						for(o=0; o<=1;++o){
+							if(high_amps[o] != 0){
+								chprintf((BaseSequentialStream *)&SD3, "order=%d\n", order_out[o]); //unsigned integer
+								chprintf((BaseSequentialStream *)&SD3, "amplitude=%f\n", high_amps[o]);
+								chprintf((BaseSequentialStream *)&SD3, "\n");
+							}
+						}
+						if(high_amps[0] != 0){
 							chprintf((BaseSequentialStream *)&SD3, "\n");
 						}
 					}
@@ -241,6 +233,7 @@ void compare_amp(float* amplitude_input, int* order_input){
 	static float a;
 	static int b;
 	static int c;
+	static int d;
 	a=0;
 	b=0;
 	/*
@@ -282,6 +275,25 @@ void compare_amp(float* amplitude_input, int* order_input){
 	}
 	chprintf((BaseSequentialStream *)&SD3, "\n");
 	*/
+
+	// si les deux micros sélectionnés sont de faces opposées.
+	if (((order_out[0]==0) && (order_out[1]==1)) || ((order_out[0]==1) && (order_out[1]==0))) {
+		order_out[1]=order_input[1];
+		high_amps[1]=amplitude_input[1];
+	}
+	else if (((order_out[0]==3) && (order_out[1]==2)) || ((order_out[0]==2) && (order_out[1]==3))) {
+		order_out[1]=order_input[1];
+		high_amps[1]=amplitude_input[1];
+	}
+	/*
+	//Affichage pour debuggage
+	chprintf((BaseSequentialStream *)&SD3, "After change\n");
+	for(d=0;d>=1;++d){
+		chprintf((BaseSequentialStream *)&SD3, "order fin=%d\n", order_out[d]); //unsigned integer
+		chprintf((BaseSequentialStream *)&SD3, "amplitude fin=%f\n", high_amps[d]);
+	}
+	chprintf((BaseSequentialStream *)&SD3, "\n");
+	*/
 }
 
 float angle_calcul(float freq_sig1, float freq_sig2, float re1, float im1, float re2, float im2) {
@@ -303,7 +315,7 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 	//chprintf((BaseSequentialStream *)&SD3, "position=%d\n", position);
 	//chprintf((BaseSequentialStream *)&SD3, "amplitude output=%f\n", mic_amp_output);
 
-	if((position < 10) || (position > 29)){
+	if((position < MIN_FREQ) || (position > MAX_FREQ)){
 		mic_amp = 0;
 		//chprintf((BaseSequentialStream *)&SD3, "amplitude modified to 0\n\n");
 		return mic_amp;  // on supprime les valeurs inutiles a l'analyse
@@ -312,11 +324,10 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 	return mic_amp;
 }
 
-float filtre_amp(float mic_amp_output)
+void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output < 2000000000) {
-		mic_amp_output = 0;
-		return mic_amp_output;
+	if(mic_amp_output[0] < 40000) {
+		mic_amp_output[0] = 0;
+		mic_amp_output[1] = 0;
 	}
-	return mic_amp_output;
 }
