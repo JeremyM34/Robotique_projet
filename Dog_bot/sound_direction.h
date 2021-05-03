@@ -21,8 +21,13 @@ void sound_direction_setUp(void);
 
 void compare_amp(float* amplitude_input, int* order_input);
 
+float angle_calcul(float freq_sig1, float freq_sig2, float re1, float im1, float re2, float im2);
+
 void processAudioData(int16_t *data, uint16_t num_samples);
 
+float passe_bande(uint8_t position, float mic_amp_output);
+
+void filtre_amp(float* mic_amp_output);
 /*
 *	Returns the pointer to the BUFFER_NAME_t buffer asked
 */
