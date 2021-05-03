@@ -12,4 +12,6 @@ float front_speed_calc(void);
 float rotation_calc(void);
 void compute_dt(void);
 
+float get_actual_error(void);
+
 #endif /* MOTOR_CONTROLLER_H */

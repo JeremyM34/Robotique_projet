@@ -67,7 +67,7 @@ void goTo(double direction, bool flag_new)
 		perpendicular_error += sinf((alpha_error + last_alpha_error)/2) * front_speed_calc(); // * USTOS((float)dt);
 	}
 
-	chprintf((BaseSequentialStream *) &SD3, "alpha_error = %3f; front_speed = %3f; dt = %3f; perpendicular_error = %3f; \n", alpha_error, front_speed, (float)dt/1000000., perpendicular_error);
+	//chprintf((BaseSequentialStream *) &SD3, "alpha_error = %3f; front_speed = %3f; dt = %3f; perpendicular_error = %3f; \n", alpha_error, front_speed, (float)dt/1000000., perpendicular_error);
 
 	compute_controls();
 
@@ -200,4 +200,9 @@ void compute_dt(void)
 	//chprintf((BaseSequentialStream *) &SD3, "dt = %d ; ", chVTGetSystemTime());
 
 	last_time = time;
+}
+
+float get_actual_error(void)
+{
+	return alpha_error*180/M_PI;
 }
