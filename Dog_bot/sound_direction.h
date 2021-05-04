@@ -21,7 +21,11 @@ void sound_direction_setUp(void);
 
 void compare_amp(float* amplitude_input, int* order_input);
 
-float angle_calcul(float freq_sig1, float freq_sig2, float re1, float im1, float re2, float im2);
+float phase_calcul(uint16_t position);
+
+int get_sound_angle(float* sound_direction);
+
+float angle_calcul(float phase);
 
 void processAudioData(int16_t *data, uint16_t num_samples);
 
