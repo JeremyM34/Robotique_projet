@@ -26,12 +26,16 @@ static int order_out[2]; // which are the mics with the highest amplitude?
 //Array of amplitude values into compare_amp
 static float amps_in[2];
 static int order_in[2]; //order of mics: Right(0), Left(1), Back(2), Front(3)
-//Calcul d'angle
+//Calcul d'phase
 float fsig1=0; //fréquence du signal 1
 float fsig2=1; // fréquence du signal 2
-static float angle_compteur = 0;
-float angle_final;
-static float angle_old=0;
+static uint16_t compteur = 0;
+float phase_final;
+static float angle_inter=0;
+static float angle_moyenne=0;
+static float phase_old=0;
+
+static int new_angle_flag = 0;
 
 #define MIN_VALUE_THRESHOLD	10000 
 
@@ -63,7 +67,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	*/
 
 	static uint16_t nb_samples = 0;
-	static uint8_t mustSend = 0;
+	//static uint8_t mustSend = 0;
 	static uint8_t o;
 
 	//loop to fill the buffers
@@ -113,7 +117,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			//arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
 			//arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
 
-			for(uint16_t j=0; j<=FFT_SIZE/2; ++j){
+			for(uint16_t j=0; j<=FFT_SIZE/2; ++j){ //faire moyenne des phases enregistrés (20) puis les envoyés au moteur
 					micRight_output[j] = passe_bande(j, micRight_output[j]); // filtrage en fréquence
 					micLeft_output[j] = passe_bande(j, micLeft_output[j]);	//car symetrie, on prend seulement les positions positives
 					//micBack_output[j] = passe_bande(j, micBack_output[j]);
@@ -131,37 +135,48 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 					filtre_amp(high_amps); // filtrage en amplitude pour eliminer le son parasite
 
-					angle_final = angle_calcul(j); // calcul de l'angle
+					phase_final = phase_calcul(j); // calcul de phase
+					angle_inter = angle_calcul(phase_final);
 
-				//}
-				//sends only one FFT result over 10 for 1 mic to not flood the computer
-				//sends to UART3
+					if(high_amps[0] !=0){
+						angle_moyenne = angle_inter+angle_moyenne;
+						chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
+						compteur++;
+						chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
+					}
 
-				if(mustSend >= 10){
-					if((j >= MIN_FREQ) && (j <= MAX_FREQ)){ //***
-
-						//chprintf((BaseSequentialStream *)&SD3, "Final\n");
+					if((compteur == 20)&&(high_amps[0] != 0)){	//envoyer angle
+						angle_moyenne = angle_moyenne/20;
+						chprintf((BaseSequentialStream *)&SD3, "angle moyen=%f\n", angle_moyenne);
+						compteur=0;
+						angle_moyenne=0; //enlever quand on utilise le return
+						new_angle_flag = 1;
+					} else if((compteur >= 20)&&(high_amps[0] == 0)){
+						compteur=0;
+					}
+					/*
+					if((j >= MIN_FREQ) && (j <= MAX_FREQ)){ //**
 						for(o=0; o<=1;++o){
 							if(high_amps[0] != 0){
 								chprintf((BaseSequentialStream *)&SD3, "order=%d\n", order_out[o]); //unsigned integer
 								chprintf((BaseSequentialStream *)&SD3, "amplitude=%f\n", high_amps[o]);
-								chprintf((BaseSequentialStream *)&SD3, "\n");
+								//chprintf((BaseSequentialStream *)&SD3, "\n");
 							}
 						}
+
 						if(high_amps[0] != 0){
-							//angle_final = angle_final*360/(2*M_PI);
-							chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle_final);
+							//phase_final = phase_final*360/(2*M_PI);
+							chprintf((BaseSequentialStream *)&SD3, "angle inter=%f\n", angle_inter);
+							//chprintf((BaseSequentialStream *)&SD3, "angle moyen=%f\n", angle_moyenne);
+							//chprintf((BaseSequentialStream *)&SD3, "phase=%f\n", phase_final);
 							chprintf((BaseSequentialStream *)&SD3, "\n");
 						}
-					}
 
-					mustSend = 0;  //A METTRE OU PAS
-					//chprintf((BaseSequentialStream *)&SD3, "mustSend=%d\n", mustSend);
-				}
-				nb_samples = 0;
-				mustSend++;
-				//chprintf((BaseSequentialStream *)&SD3, "mustSend2=%d\n", mustSend);
-		}
+					}
+				//}
+				 */
+			}
+			nb_samples = 0;
 	}
 }
 
@@ -261,12 +276,12 @@ void compare_amp(float* amplitude_input, int* order_input){
 	*/
 }
 
-float angle_calcul(uint16_t position) { 	//PLAN A: comprendre comment se situe la phase par rapport a l'angle		PLAN B: faire comme romix, 2 micros front et back seuelemtn
-	// penser au sens de l'angle, les valeurs de re et im en entrée sont aléatoires
-	// calcul de l'angle grace aux FFT
+float phase_calcul(uint16_t position) { 	//PLAN A: comprendre comment se situe la phase par rapport a l'phase		PLAN B: faire comme romix, 2 micros front et back seuelemtn
+	// penser au sens de l'phase, les valeurs de re et im en entrée sont aléatoires
+	// calcul de l'phase grace aux FFT
 	//if (fsig1==fsig2){ //extraire fsig des FFT! pas encore fait.
 
-	float angle;
+	float phase;
 	float phase1;
 	float phase2;
 	float FFT_re1;
@@ -305,27 +320,25 @@ float angle_calcul(uint16_t position) { 	//PLAN A: comprendre comment se situe l
 	phase1=atan2(FFT_im1,FFT_re1);
 	phase2=atan2(FFT_im2,FFT_re2);
 
-	angle=phase1-phase2; // en radians
+	phase=phase1-phase2; // en radians
 
-	// ne pas assigner 0 à la valeur de l'angle initiale angle_old!
-	/*
-	if(angle_compteur == 0){
-		angle_old = angle;
-		++angle_compteur;
+	//phase = 0.7*phase + 0.3*phase_old; // donne moins d'importance aux oscillations de la valeur non filtrée.
+
+	if(((order_out[0]==1) && (phase>0)) || ((order_out[0]==0) && (phase<0))){ //il y a des valeurs incohérentes ou la phase est négative alors qu'elle devrait toujours etre positive et vice verca
+		high_amps[0]=0;
+		high_amps[1]=0;
 	}
-	*/
-	angle = 0.7*angle + 0.3*angle_old; // donne moins d'importance aux oscillations de la valeur non filtrée.
-	//chprintf((BaseSequentialStream *)&SD3, "unfiltered angle =%f\n", angle);
-	if((angle>M_PI/2) || (angle < -M_PI/2)){
-		angle = angle_old;
-		//chprintf((BaseSequentialStream *)&SD3, "modified to =%f\n", angle);
-		return angle;
+
+	//chprintf((BaseSequentialStream *)&SD3, "unfiltered phase =%f\n", phase);
+
+	if((phase>0.4) || (phase < -0.4)){ // eliminer les phases improbables
+		phase = phase_old;
+		return phase;
 	} else {
-		angle_old = angle;
-		//chprintf((BaseSequentialStream *)&SD3, "Verified\n");
-		return angle;
+		phase_old = phase;
+		return phase;
 	}
-	//angle = angle*360/(2*M_PI); //en degrés
+	//phase = phase*360/(2*M_PI); //en degrés
 }
 
 float passe_bande(uint8_t position, float mic_amp_output) {
@@ -344,8 +357,21 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 
 void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < 40000) {
+	if(mic_amp_output[0] < 25000) {
 		mic_amp_output[0] = 0;
 		mic_amp_output[1] = 0;
 	}
+}
+
+float angle_calcul(float phase) { // angle en degrés
+	float angle;
+	angle = 217.06*phase - 5.909; // tester avec offset 5.909
+	//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
+	return angle;
+}
+
+int get_sound_angle(float* sound_direction){
+	*sound_direction = angle_moyenne;
+	new_angle_flag?new_angle_flag=0:0;
+	return new_angle_flag;
 }
