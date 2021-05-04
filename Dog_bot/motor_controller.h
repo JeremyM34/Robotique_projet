@@ -3,7 +3,8 @@
 
 void motor_controller_setUp(void);
 
-void goTo(double direction, bool flag_new);
+void goTo(float direction, bool flag_new, int lateral_distance);
+void stop(void);
 
 void compute_controls(void);
 void actuate(void);

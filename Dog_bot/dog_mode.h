@@ -1,8 +1,6 @@
 #ifndef DOG_MODE_H
 #define DOG_MODE_H
 
-#define DIRECTION_TIMEOUT 15 // [sec]
-
 void dog_mode_setUp(void);
 
 void playTheDog(void);

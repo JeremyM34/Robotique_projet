@@ -11,6 +11,10 @@
 
 #include <dog_mode.h>
 
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
+
 static void serial_start(void)
 {
 	static SerialConfig ser_cfg = {
@@ -29,6 +33,8 @@ int main(void)
     halInit();
     chSysInit();
     mpu_init();
+
+    messagebus_init(&bus, &bus_lock, &bus_condvar);
 
     //starts the serial communication
     serial_start();

@@ -12,8 +12,22 @@
 #include <leds.h>
 #include <spi_comm.h>
 
-static float direction_error = -180;
+#define STANDARD_DIRECTION_TIMEOUT	7 //[s]
+#define AVOIDANCE_TIMEOUT	5 //[s]
+#define TIME_BETWEEN_OBSTACLE 1.5 //[s]
 
+#define STOMS(n)	n*1000
+
+static float direction_error = -90;
+
+static int new_direction_flag = 1;
+static systime_t last_direction_time; //[ms]
+
+static int avoidance_manoeuver_flag = 0;
+
+static int lateral_distance = 0; //[cm]
+
+/*
 static int body_led_flag = 1;
 
 static void body_led_callback(PWMDriver *gptp)
@@ -23,10 +37,11 @@ static void body_led_callback(PWMDriver *gptp)
 }
 
 static const PWMConfig pwm_body_led = {
-       .frequency = 0, //variable
-		.period = 0xFFFF,
-		.callback = body_led_callback
+    .frequency = 0, //variable
+	.period = 0xFFFF,
+	.callback = body_led_callback
 };
+*/
 
 void dog_mode_setUp(void)
 {
@@ -35,43 +50,96 @@ void dog_mode_setUp(void)
 	mapper_setUp();
 	spi_comm_start(); //For the RGB leds
 
-	pwmStart(&PWMD5, &pwm_body_led);
-	pwmEnablePeriodicNotification(&PWMD5); // PWM general interrupt at the beginning of the period to handle motor steps.
+	//pwmStart(&PWMD5, &pwm_body_led);
+	//pwmEnablePeriodicNotification(&PWMD5); // PWM general interrupt at the beginning of the period to handle motor steps.
 
-	goTo(direction_error, 1);
+	//goTo(direction_error, 1);
+	last_direction_time = ST2MS(chVTGetSystemTime());
 }
 
 void playTheDog(void)
 {	
-	follow_trajectory();
-	led_showDirection();
+	//compute_trajectory();
+	//follow_trajectory();
+	//led_showDirection();
+
+	compute_trajectory();
+
+
+
 	/*
-	if(directionAge<DIRECTION_TIMEOUT)
+	if(get_sound_angle(&sound_direction))
 	{
-		led_showDirection();
-		led_showMood();
-		compute_trajectory();
+
+	}
+	*/
+	int direction_timeout;
+	int directionAge = ST2MS(chVTGetSystemTime()) - last_direction_time;
+
+	//chprintf((BaseSequentialStream *) &SD3, "flag = %d \n", avoidance_manoeuver_flag);
+
+	if(avoidance_manoeuver_flag)
+		direction_timeout = STOMS(AVOIDANCE_TIMEOUT);
+	else
+		direction_timeout = STOMS(STANDARD_DIRECTION_TIMEOUT);
+
+	if(directionAge<direction_timeout)
+	{
 		follow_trajectory();
+		led_showDirection();
 	}
 	else
 	{
+		stop();
 		led_standBy();
 	}
-	*/
+
 }
 
 ///////////// MOVE ////////////////
 
 void compute_trajectory(void)
 {
+	static systime_t last_obstacle_time = 0;
+
 	static map_data map_info;
 
+	compute_map();
+
 	map_info = get_map();
+
+	if(map_info.obstacle_flag && ((ST2MS(chVTGetSystemTime())- last_obstacle_time) > STOMS(TIME_BETWEEN_OBSTACLE)))
+	{
+		map_info.obstacle_flag = 0;
+		last_obstacle_time = ST2MS(chVTGetSystemTime());
+
+		if(fabsf(map_info.obstacle_direction) > 50)
+		{
+			direction_error = 90 * map_info.obstacle_direction/fabsf(map_info.obstacle_direction) - map_info.obstacle_direction;
+			lateral_distance = 4 * map_info.obstacle_direction/fabsf(map_info.obstacle_direction);
+		}
+		else
+		{
+			direction_error = 180 - map_info.obstacle_direction;
+			direction_error>180?direction_error-=360:0;
+			last_direction_time = ST2MS(chVTGetSystemTime());
+			avoidance_manoeuver_flag = 1;
+			lateral_distance = 0;
+		}
+		new_direction_flag = 1;
+	}
+
 }
 
 void follow_trajectory(void)
 {
-	goTo(direction_error, 0);
+	goTo(direction_error, new_direction_flag, lateral_distance);
+
+	if(new_direction_flag)
+	{
+		new_direction_flag = 0;
+		lateral_distance = 0;
+	}
 }
 
 ///////////// LEDS ////////////////
@@ -83,6 +151,7 @@ void led_showDirection(void)
 
 	clear_leds();
 	set_front_led(0);
+	set_body_led(0);
 
 	switch (led_number)
 	{
@@ -124,8 +193,20 @@ void led_showMood(void)
 
 void led_standBy(void)
 {
-	!body_led_flag?body_led_flag=1:0;
+	static int body_led_counter = 0;
 
-	//pwm_body_led.frequency = new_frequency;
+	clear_leds();
+	set_front_led(0);
+
+	if(body_led_counter%20==1)
+	{
+		set_body_led(1); //2 for toggle
+	}
+	else
+	{
+		set_body_led(0);
+	}
+
+	body_led_counter++;
 }
 

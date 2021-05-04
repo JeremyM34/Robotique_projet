@@ -16,7 +16,7 @@
 #define	WHEEL_TO_WHEEL_DIST	5.31	// [cm]
 
 #define P	2	//Proportional term (error to e_puck rotation speed)
-#define I	0.15	//Integral term (regulate perpendicular drift from initial straight line to direction)
+#define I	0.2	//Integral term (regulate perpendicular drift from initial straight line to direction)
 #define Kv	10	//Proportional term (regulate front speed depending on direction error)
 
 static systime_t dt = 0; //[us] time elapsed between each loop
@@ -27,6 +27,9 @@ static float last_alpha_error = 0; //last direction error in [rad]
 static float perpendicular_error = 0; //perpendicular position error in [cm]
 static float front_speed = 0; //speed toward the front of the e_puck in [cm/s]
 static float w_z = 0; //rotational speed of the e_puck
+
+static float last_dist_left = 0;
+static float last_dist_right = 0;
 
 /*
 *	Wrapper to call the inits during startup.
@@ -47,7 +50,7 @@ void motor_controller_setUp(void)
 *		- direction : angle [deg]  describing where to go (useful only when new direction to go is computed)
 *		- flag_new : 1 if the direction is new, 0 if not.
 */
-void goTo(double direction, bool flag_new)
+void goTo(float direction, bool flag_new, int lateral_distance)
 {
 	compute_dt();
 
@@ -55,10 +58,13 @@ void goTo(double direction, bool flag_new)
 	{
 		initial_error = DEDTORAD(direction);
 		alpha_error = DEDTORAD(direction);
-		perpendicular_error = 0;
+		perpendicular_error = lateral_distance;
 
 		left_motor_set_pos(0); //reset motor step counter for orientation determination
 		right_motor_set_pos(0);
+
+		last_dist_left = 0;
+		last_dist_right = 0;
 	}
 	else //no new direction to go
 	{
@@ -67,13 +73,17 @@ void goTo(double direction, bool flag_new)
 		perpendicular_error += sinf((alpha_error + last_alpha_error)/2) * front_speed_calc(); // * USTOS((float)dt);
 	}
 
-	//chprintf((BaseSequentialStream *) &SD3, "alpha_error = %3f; front_speed = %3f; dt = %3f; perpendicular_error = %3f; \n", alpha_error, front_speed, (float)dt/1000000., perpendicular_error);
-
 	compute_controls();
 
 	actuate();
 
 	last_alpha_error = alpha_error;
+}
+
+void stop(void)
+{
+	right_motor_set_speed(0);
+	left_motor_set_speed(0);
 }
 
 /*
@@ -114,10 +124,7 @@ void actuate(void)
 	float speed_left_wheel = front_speed * NSTEP_ONE_TURN / WHEEL_PERIMETER + rotation_speed; //[step/s]
 	float speed_right_wheel = front_speed * NSTEP_ONE_TURN / WHEEL_PERIMETER - rotation_speed; //[step/s]
 
-	//chprintf((BaseSequentialStream *) &SD3, "speed_left_wheel = %3f ; speed_right_wheel = %3f \n", speed_left_wheel, speed_right_wheel);
-
 	if (fabsf(speed_left_wheel) > MOTOR_SPEED_LIMIT || fabsf(speed_left_wheel) > MOTOR_SPEED_LIMIT) {
-		chprintf((BaseSequentialStream *) &SD3, "over limit! \n");
 		if(front_speed >= 0)
 		{
 			if(rotation_speed>=0)
@@ -159,9 +166,6 @@ void actuate(void)
 */
 float front_speed_calc(void)
 {
-	static float last_dist_left = 0;
-	static float last_dist_right = 0;
-
 	float dist_left = (float)left_motor_get_pos() * WHEEL_PERIMETER/NSTEP_ONE_TURN;	//[cm], compute distance travelled by a wheel
 	float dist_right = (float)right_motor_get_pos() * WHEEL_PERIMETER/NSTEP_ONE_TURN;//[cm]
 
