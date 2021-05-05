@@ -12,7 +12,7 @@
 #include <leds.h>
 #include <spi_comm.h>
 
-#define STANDARD_DIRECTION_TIMEOUT	7 //[s]
+#define STANDARD_DIRECTION_TIMEOUT	1 //[s]
 #define AVOIDANCE_TIMEOUT	5 //[s]
 #define TIME_BETWEEN_OBSTACLE 1.5 //[s]
 
@@ -27,21 +27,27 @@ static int avoidance_manoeuver_flag = 0;
 
 static int lateral_distance = 0; //[cm]
 
-/*
-static int body_led_flag = 1;
 
-static void body_led_callback(PWMDriver *gptp)
+
+static void body_led_callback(PWMDriver *pwmp)
 {
-	(void) gptp;
-	body_led_flag?set_body_led(2):set_body_led(0); //2 for toogle
+	(void)pwmp;
+	set_body_led(2); //2 for toggle
 }
 
-static const PWMConfig pwm_body_led = {
-    .frequency = 0, //variable
-	.period = 0xFFFF,
-	.callback = body_led_callback
+static PWMConfig pwm_body_led_cfg = {
+  10000,                                    /* 10kHz PWM clock frequency.     */
+  50,                                 	    /* Initial PWM period 1S.         */
+  NULL,                                     /* Period callback.               */
+  {
+   {PWM_OUTPUT_DISABLED, body_led_callback},          /* CH1 mode and callback.         */
+   {PWM_OUTPUT_DISABLED, NULL},             /* CH2 mode and callback.         */
+   {PWM_OUTPUT_DISABLED, NULL},             /* CH3 mode and callback.         */
+   {PWM_OUTPUT_DISABLED, NULL}              /* CH4 mode and callback.         */
+  },
+  0,                                        /* Control Register 2.            */
+  0                                         /* DMA/Interrupt Enable Register. */
 };
-*/
 
 void dog_mode_setUp(void)
 {
@@ -50,8 +56,15 @@ void dog_mode_setUp(void)
 	mapper_setUp();
 	spi_comm_start(); //For the RGB leds
 
-	//pwmStart(&PWMD5, &pwm_body_led);
-	//pwmEnablePeriodicNotification(&PWMD5); // PWM general interrupt at the beginning of the period to handle motor steps.
+	pwmStart(&PWMD5, &pwm_body_led_cfg);
+
+	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, 9500));
+
+	pwmEnableChannelNotification(&PWMD5, 0);
+
+
+
+
 
 	//goTo(direction_error, 1);
 	last_direction_time = ST2MS(chVTGetSystemTime());
@@ -193,20 +206,9 @@ void led_showMood(void)
 
 void led_standBy(void)
 {
-	static int body_led_counter = 0;
-
 	clear_leds();
 	set_front_led(0);
 
-	if(body_led_counter%20==1)
-	{
-		set_body_led(1); //2 for toggle
-	}
-	else
-	{
-		set_body_led(0);
-	}
-
-	body_led_counter++;
+	//set_body_led(1);
 }
 
