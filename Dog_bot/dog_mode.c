@@ -6,7 +6,7 @@
 #include <math.h>
 
 #include <dog_mode.h>
-//#include <sound_direction.h>
+#include <sound_direction.h>
 #include <mapper.h>
 #include <motor_controller.h>
 #include <leds.h>
@@ -51,7 +51,7 @@ static PWMConfig pwm_body_led_cfg = {
 
 void dog_mode_setUp(void)
 {
-	//sound_direction_setUp();
+	sound_direction_setUp();
 	motor_controller_setUp();
 	mapper_setUp();
 	spi_comm_start(); //For the RGB leds
@@ -72,13 +72,7 @@ void dog_mode_setUp(void)
 
 void playTheDog(void)
 {	
-	//compute_trajectory();
-	//follow_trajectory();
-	//led_showDirection();
-
 	compute_trajectory();
-
-
 
 	/*
 	if(get_sound_angle(&sound_direction))
@@ -86,6 +80,7 @@ void playTheDog(void)
 
 	}
 	*/
+
 	int direction_timeout;
 	int directionAge = ST2MS(chVTGetSystemTime()) - last_direction_time;
 
@@ -106,7 +101,6 @@ void playTheDog(void)
 		stop();
 		led_standBy();
 	}
-
 }
 
 ///////////// MOVE ////////////////
@@ -146,7 +140,7 @@ void compute_trajectory(void)
 
 void follow_trajectory(void)
 {
-	goTo(direction_error, new_direction_flag, lateral_distance);
+	//goTo(direction_error, new_direction_flag, lateral_distance);
 
 	if(new_direction_flag)
 	{
