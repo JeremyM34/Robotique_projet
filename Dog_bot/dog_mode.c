@@ -12,41 +12,45 @@
 #include <leds.h>
 #include <spi_comm.h>
 
-#define STANDARD_DIRECTION_TIMEOUT	1 //[s]
-#define AVOIDANCE_TIMEOUT	5 //[s]
-#define TIME_BETWEEN_OBSTACLE 1.5 //[s]
+#define STANDARD_DIRECTION_TIMEOUT	2 //[s]
+#define AVOIDANCE_TIMEOUT	2 //[s]
+#define TIME_BETWEEN_OBSTACLE 1 //[s]
+
+enum STATE{STAND_BY, FOLLOWING, AVOIDING, UPSET};
 
 #define STOMS(n)	n*1000
 
 static float direction_error = -90;
-
 static int new_direction_flag = 1;
+
 static systime_t last_direction_time; //[ms]
-
 static int avoidance_manoeuver_flag = 0;
-
 static int lateral_distance = 0; //[cm]
 
 
-
-static void body_led_callback(PWMDriver *pwmp)
+static void body_led_callback_on(PWMDriver *pwmp)
 {
 	(void)pwmp;
-	set_body_led(2); //2 for toggle
+	set_body_led(1);
+}
+
+static void body_led_callback_off(PWMDriver *pwmp)
+{
+	(void)pwmp;
+	set_body_led(0);
 }
 
 static PWMConfig pwm_body_led_cfg = {
-  10000,                                    /* 10kHz PWM clock frequency.     */
-  50,                                 	    /* Initial PWM period 1S.         */
-  NULL,                                     /* Period callback.               */
-  {
-   {PWM_OUTPUT_DISABLED, body_led_callback},          /* CH1 mode and callback.         */
-   {PWM_OUTPUT_DISABLED, NULL},             /* CH2 mode and callback.         */
-   {PWM_OUTPUT_DISABLED, NULL},             /* CH3 mode and callback.         */
-   {PWM_OUTPUT_DISABLED, NULL}              /* CH4 mode and callback.         */
-  },
-  0,                                        /* Control Register 2.            */
-  0                                         /* DMA/Interrupt Enable Register. */
+	.frequency = 10000,
+	.period = 50,
+	.cr2 = 0,
+	.callback = body_led_callback_on,
+	{
+		{.mode = PWM_OUTPUT_ACTIVE_HIGH, body_led_callback_off},          /* CH1 mode and callback.         */
+		{PWM_OUTPUT_DISABLED, NULL},             /* CH2 mode and callback.         */
+		{PWM_OUTPUT_DISABLED, NULL},             /* CH3 mode and callback.         */
+		{PWM_OUTPUT_DISABLED, NULL}              /* CH4 mode and callback.         */
+	}
 };
 
 void dog_mode_setUp(void)
@@ -58,15 +62,12 @@ void dog_mode_setUp(void)
 
 	pwmStart(&PWMD5, &pwm_body_led_cfg);
 
-	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, 9500));
+	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, 500));
+
+    pwmEnablePeriodicNotification(&PWMD5); // PWM general interrupt at the beginning of the period to handle motor steps.
 
 	pwmEnableChannelNotification(&PWMD5, 0);
 
-
-
-
-
-	//goTo(direction_error, 1);
 	last_direction_time = ST2MS(chVTGetSystemTime());
 }
 
@@ -83,8 +84,6 @@ void playTheDog(void)
 
 	int direction_timeout;
 	int directionAge = ST2MS(chVTGetSystemTime()) - last_direction_time;
-
-	//chprintf((BaseSequentialStream *) &SD3, "flag = %d \n", avoidance_manoeuver_flag);
 
 	if(avoidance_manoeuver_flag)
 		direction_timeout = STOMS(AVOIDANCE_TIMEOUT);
@@ -203,6 +202,10 @@ void led_standBy(void)
 	clear_leds();
 	set_front_led(0);
 
-	//set_body_led(1);
+	int duty_cycle = 0;
+
+	duty_cycle = (sinf((float)ST2MS(chVTGetSystemTime())/200.) + 1) * 4900 + 200;
+
+	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, duty_cycle));
 }
 
