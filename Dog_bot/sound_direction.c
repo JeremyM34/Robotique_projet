@@ -23,6 +23,8 @@ static float micBack_output[FFT_SIZE];
 //Array of amplitude values out of compare_amp: Two highest amplitude
 static float high_amps[2];
 static int order_out[2]; // which are the mics with the highest amplitude?
+// Array of secondary amplitudes (Front and Back)
+static float sec_amps[2];
 //Array of amplitude values into compare_amp
 static float amps_in[2];
 static int order_in[2]; //order of mics: Right(0), Left(1), Back(2), Front(3)
@@ -76,15 +78,15 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		//construct an array of complex numbers. Put 0 to the imaginary part
 		micRight_cmplx_input[nb_samples] = (float)data[i + MIC_RIGHT];
 		micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
-		//micBack_cmplx_input[nb_samples] = (float)data[i + MIC_BACK];
-		//micFront_cmplx_input[nb_samples] = (float)data[i + MIC_FRONT];
+		micBack_cmplx_input[nb_samples] = (float)data[i + MIC_BACK];
+		micFront_cmplx_input[nb_samples] = (float)data[i + MIC_FRONT];
 
 		nb_samples++;
 
 		micRight_cmplx_input[nb_samples] = 0;
 		micLeft_cmplx_input[nb_samples] = 0;
-		//micBack_cmplx_input[nb_samples] = 0;
-		//micFront_cmplx_input[nb_samples] = 0;
+		micBack_cmplx_input[nb_samples] = 0;
+		micFront_cmplx_input[nb_samples] = 0;
 
 		nb_samples++;
 
@@ -103,8 +105,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
 		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
-		//doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
-		//doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
+		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
+		doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
 
 		/*	Magnitude processing
 		*
@@ -115,8 +117,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		*/
 		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
-		//arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
-		//arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
+		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
+		arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
 
 		//for(uint16_t j=MAX_FREQ; j<=MAX_FREQ; ++j){ //faire moyenne des phases enregistrés (20) puis les envoyés au moteur	//La résolution en fréquence est déjà de 15,625Hz, on perdrait donc en précision en analysant une bande de fréquence plus large.
 				//micRight_output[j] = passe_bande(j, micRight_output[j]); // filtrage en fréquence //N'est plus nécessaire car 1 seule fréquence est regardée
@@ -126,8 +128,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 				amps_in[0]= micRight_output[MAX_FREQ];
 				amps_in[1]= micLeft_output[MAX_FREQ];
-				//amps_in[0]= micBack_output[j];
-				//amps_in[1]= micFront_output[j];
+				sec_amps[0]= micBack_output[MAX_FREQ];
+				sec_amps[1]= micFront_output[MAX_FREQ];
 
 				order_in[0]=0;  //probleme 0 et 1?
 				order_in[1]=1;
@@ -148,6 +150,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 					phase_moyenne = phase_final+phase_moyenne;	//!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
 					//chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
 					compteur++;
+					//chprintf((BaseSequentialStream *)&SD3, "Front Mic amplitude=%f\n", sec_amps[1]);
+					//chprintf((BaseSequentialStream *)&SD3, "Back Mic amplitude=%f\n\n", sec_amps[0]);
 					//chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
 				}
 
@@ -213,8 +217,6 @@ void compare_amp(float* amplitude_input, int* order_input){
 		high_amps[0]=amplitude_input[0];
 		order_out[1]=order_input[1];
 		high_amps[1]=amplitude_input[1];
-
-
 		/*
 	//Affichage pour debuggage
 	if(high_amps[0]!=0){
@@ -326,7 +328,7 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 
 void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < 4000) { //semble être suffisant
+	if(mic_amp_output[0] < 8000) { //semble être suffisant
 		mic_amp_output[0] = 0;
 		mic_amp_output[1] = 0;
 	}
@@ -334,10 +336,19 @@ void filtre_amp(float* mic_amp_output)
 
 float angle_calcul(float phase) { // angle en degrés
 	float angle;
-	angle = 744.11*pow(phase,6) - 396.88*pow(phase,5) - 607.81*pow(phase,4) + 340.88*pow(phase,3) + 106.06*pow(phase,2) + 27.34*phase + 3.9455;
-
-	//angle = 159.09*pow(phase,6) + 38.99*pow(phase,5) - 130.42*pow(phase,4) + 26.067*pow(phase,3) + 11.744*pow(phase,2) + 99.131*phase - 16.93; // tester avec offset 5.909
-	//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
+	if(sec_amps[1]>=sec_amps[0]){
+	angle = 744.11*pow(phase,6) - 396.88*pow(phase,5) - 607.81*pow(phase,4) + 340.88*pow(phase,3) + 106.06*pow(phase,2) + 27.34*phase + 3.9455; //FRONT
+	} else{
+		angle = 159.09*pow(phase,6) + 38.99*pow(phase,5) - 130.42*pow(phase,4) + 26.067*pow(phase,3) + 11.744*pow(phase,2) + 99.131*phase - 16.93; //BACK
+		if(order_out[0]==1){ //High amp comes from LEFT
+			angle = -180-angle; //angle est négatif
+		} else if(order_out[0]==0){ //High amp comes from RIGHT
+			angle = 180 - angle;	//angle est positif
+		}
+	}
+	if(angle>180 || angle<-180){
+		angle=180;
+	}
 	return angle;
 }
 
