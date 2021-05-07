@@ -32,6 +32,7 @@ float fsig2=1; // fréquence du signal 2
 static uint16_t compteur = 0;
 float phase_final;
 static float angle_inter=0;
+static float phase_moyenne=0;
 static float angle_moyenne=0;
 static float phase_old=0;
 
@@ -144,20 +145,19 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 				if(high_amps[0] !=0){
 					phase_final = phase_calcul(MAX_FREQ); // calcul de phase
-					//angle_inter = angle_calcul(phase_final);
-					angle_moyenne = phase_final+angle_moyenne;	//!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
+					phase_moyenne = phase_final+phase_moyenne;	//!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
 					//chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
 					compteur++;
 					//chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
 				}
 
 				if((compteur == 20)){	//envoyer angle
-					angle_moyenne = angle_moyenne/20;
-					chprintf((BaseSequentialStream *)&SD3, "angle moyen=%f\n", angle_moyenne); //!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
+					phase_moyenne = phase_moyenne/20;
+					chprintf((BaseSequentialStream *)&SD3, "phase moyenne=%f\n", phase_moyenne); //!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
+					angle_moyenne = angle_calcul(phase_moyenne);
 					compteur=0;
-					angle_moyenne=0; //enlever quand on utilise le return
+					phase_moyenne=0; //enlever quand on utilise le return
 					new_angle_flag = 1;
-				}
 
 				/*
 				if((j >= MIN_FREQ) && (j <= MAX_FREQ)){ //**
@@ -168,7 +168,6 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 							//chprintf((BaseSequentialStream *)&SD3, "\n");
 						}
 					}
-
 					if(high_amps[0] != 0){
 						//phase_final = phase_final*360/(2*M_PI);
 						chprintf((BaseSequentialStream *)&SD3, "angle inter=%f\n", angle_inter);
@@ -176,11 +175,10 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 						//chprintf((BaseSequentialStream *)&SD3, "phase=%f\n", phase_final);
 						chprintf((BaseSequentialStream *)&SD3, "\n");
 					}
-
 				}
 			//}
 			 */
-		//}
+		}
 		nb_samples = 0;
 	}
 }
@@ -225,8 +223,6 @@ void compare_amp(float* amplitude_input, int* order_input){
 		chprintf((BaseSequentialStream *)&SD3, "amplitude=%f\n", high_amps[c]);
 	}
 	chprintf((BaseSequentialStream *)&SD3, "\n");
-
-
 	// si les deux micros sélectionnés sont de faces opposées.
 	if (((order_out[0]==0) && (order_out[1]==1)) || ((order_out[0]==1) && (order_out[1]==0))) {
 		order_out[1]=order_input[1];
@@ -236,7 +232,6 @@ void compare_amp(float* amplitude_input, int* order_input){
 		order_out[1]=order_input[1];
 		high_amps[1]=amplitude_input[1];
 	}
-
 	//Affichage pour debuggage
 	chprintf((BaseSequentialStream *)&SD3, "After change\n");
 	for(d=0;d>=1;++d){
@@ -330,7 +325,7 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 
 void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < 2000) { //semble être suffisant
+	if(mic_amp_output[0] < 4000) { //semble être suffisant
 		mic_amp_output[0] = 0;
 		mic_amp_output[1] = 0;
 	}
@@ -338,7 +333,7 @@ void filtre_amp(float* mic_amp_output)
 
 float angle_calcul(float phase) { // angle en degrés
 	float angle;
-	angle = 217.06*phase - 5.909; // tester avec offset 5.909
+	phase = 159.09*pow(phase,6) + 38.99*pow(phase,5) - 130.42*pow(phase,4) + 26.067*pow(phase,3) + 11.744*pow(phase,2) + 99.131*phase - 16.93; // tester avec offset 5.909
 	//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
 	return angle;
 }
