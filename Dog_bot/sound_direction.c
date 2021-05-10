@@ -36,6 +36,8 @@ static float phase_moyenne=0;
 static float angle_moyenne=0;
 static float phase_old=0;
 
+static bool got_new_direction_flag = FALSE;
+
 static int new_angle_flag = 0;
 
 #define MIN_VALUE_THRESHOLD	10000 
@@ -58,6 +60,11 @@ void sound_direction_setUp(void)
 *	uint16_t num_samples	Tells how many data we get in total (should always be 640)
 */
 void processAudioData(int16_t *data, uint16_t num_samples){
+
+	if(got_new_direction_flag)
+	{
+		new_angle_flag = 0;
+	}
 
 	/*
 	*
@@ -159,6 +166,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 					compteur=0;
 					phase_moyenne=0; //enlever quand on utilise le return
 					new_angle_flag = 1;
+					got_new_direction_flag = FALSE;
 
 				/*
 				if((j >= MIN_FREQ) && (j <= MAX_FREQ)){ //**
@@ -343,6 +351,6 @@ float angle_calcul(float phase) { // angle en degrés
 
 int get_sound_angle(float* sound_direction){
 	*sound_direction = angle_moyenne;
-	new_angle_flag?new_angle_flag=0:0;
+	new_angle_flag?got_new_direction_flag=TRUE:0;
 	return new_angle_flag;
 }

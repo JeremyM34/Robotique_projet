@@ -33,7 +33,7 @@ enum STATES state = FOLLOWING;
 static bool state_change = TRUE;
 
 static float direction_error = -90;
-static bool new_direction_flag = 1;
+static bool new_direction_flag = 0;
 
 static systime_t last_direction_time; //[ms]
 static int lateral_distance = 0; //[cm]
@@ -136,13 +136,16 @@ void playTheDog(void)
 		follow_trajectory();
 		led_showDirection();
 	}
-
-	/*
-	if(get_sound_angle(&sound_direction))
+	
+	if(get_sound_angle(&direction_error))
 	{
+		new_direction_flag = 1;
+		last_direction_time = ST2MS(chVTGetSystemTime());
 
+		state = FOLLOWING;
+		state_change = TRUE;
 	}
-	*/
+	
 }
 
 ///////////// MOVE ////////////////
