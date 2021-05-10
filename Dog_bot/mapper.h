@@ -2,13 +2,20 @@
 #define MAPPER_H
 
 typedef struct {
-    int obstacle_flag; //true if there is an obstacle under the threshold distance
+    bool obstacle_flag; //TRUE if there is an obstacle under the threshold distance
     float obstacle_direction; //[deg]
 } map_data;
 
+/*
+*	Function to be called for sensors initialization.
+*/
 void mapper_setUp(void);
 
-void compute_map(void);
+/*
+*	Mapping function :
+*	    return TRUE is there's an obstacle under the threshold distance
+*/
+bool compute_map(void);
 
 map_data get_map(void);
 

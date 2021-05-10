@@ -145,7 +145,6 @@ void playTheDog(void)
 		state = FOLLOWING;
 		state_change = TRUE;
 	}
-	
 }
 
 ///////////// MOVE ////////////////
@@ -155,35 +154,34 @@ void compute_trajectory(void)
 	static systime_t last_obstacle_time = 0;
 	static map_data map_info;
 
-	compute_map();
-
-	map_info = get_map();
-
-	if(map_info.obstacle_flag && ((ST2MS(chVTGetSystemTime())- last_obstacle_time) > STOMS(TIME_BETWEEN_OBSTACLE)))
+	if((ST2MS(chVTGetSystemTime())- last_obstacle_time) > STOMS(TIME_BETWEEN_OBSTACLE))
 	{
-		map_info.obstacle_flag = 0;
-		last_obstacle_time = ST2MS(chVTGetSystemTime());
+		if(compute_map())
+		{
+			map_info = get_map();
+			last_obstacle_time = ST2MS(chVTGetSystemTime());
 
-		if(fabsf(map_info.obstacle_direction) > THRESHOLD_FOLLOW_ANGLE)
-		{
-			direction_error = 90 * map_info.obstacle_direction/fabsf(map_info.obstacle_direction) - map_info.obstacle_direction;
-			lateral_distance = WALL_FOLLOW_DISTANCE * map_info.obstacle_direction/fabsf(map_info.obstacle_direction);
-		}
-		else if(state == AVOIDING) //Dog_bot gets angry if there is too many obstacles (it was already was avoiding an obstacle)
-		{
-			state = UPSET;
-			state_change = TRUE;
-		}
-		else
-		{
-			direction_error = 180 - map_info.obstacle_direction;
-			direction_error>180?direction_error-=360:0;
+			if(fabsf(map_info.obstacle_direction) > THRESHOLD_FOLLOW_ANGLE)
+			{
+				direction_error = 90 * map_info.obstacle_direction/fabsf(map_info.obstacle_direction) - map_info.obstacle_direction;
+				lateral_distance = WALL_FOLLOW_DISTANCE * map_info.obstacle_direction/fabsf(map_info.obstacle_direction);
+			}
+			else if(state == AVOIDING) //Dog_bot gets angry if there is too many obstacles (it was already was avoiding an obstacle)
+			{
+				state = UPSET;
+				state_change = TRUE;
+			}
+			else
+			{
+				direction_error = 180 - map_info.obstacle_direction;
+				direction_error>180?direction_error-=360:0;
 
-			last_direction_time = ST2MS(chVTGetSystemTime());
-			
-			state = AVOIDING;
+				last_direction_time = ST2MS(chVTGetSystemTime());
+				
+				state = AVOIDING;
+			}
+			new_direction_flag = 1;
 		}
-		new_direction_flag = 1;
 	}
 }
 
