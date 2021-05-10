@@ -389,9 +389,9 @@ void filtre_amp(float* mic_amp_output)
 float angle_calcul(float phase) { // angle en degrés
 	float angle;
 	if(decided_side){
-	angle = 744.11*pow(phase,6) - 396.88*pow(phase,5) - 607.81*pow(phase,4) + 340.88*pow(phase,3) + 106.06*pow(phase,2) + 27.34*phase + 3.9455; //FRONT
+	angle = 997.19*pow(phase,6) - 506.52*pow(phase,5) - 738.79*pow(phase,4) + 394.61*pow(phase,3) + 116.93*pow(phase,2) + 28.707*phase + 3.9455; //FRONT
 	} else{
-		angle = 159.09*pow(phase,6) + 38.99*pow(phase,5) - 130.42*pow(phase,4) + 26.067*pow(phase,3) + 11.744*pow(phase,2) + 99.131*phase - 16.93; //BACK
+		angle = 213.19*pow(phase,6) + 49.762*pow(phase,5) - 158.53*pow(phase,4) + 30.176*pow(phase,3) + 12.948*pow(phase,2) + 104.09*phase - 16.93; //BACK
 		if(order_out[0]==1){ //High amp comes from LEFT
 			angle = -180-angle; //angle est négatif
 		} else if(order_out[0]==0){ //High amp comes from RIGHT
