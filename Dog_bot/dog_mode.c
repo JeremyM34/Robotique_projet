@@ -28,12 +28,12 @@
 #define STOMS(n)	n*1000
 
 
-enum STATES state = FOLLOWING;
+enum STATES state = STAND_BY;
 
 static bool state_change = TRUE;
 
 static float direction_error = -90;
-static bool new_direction_flag = 0;
+static bool new_direction_flag = FALSE;
 
 static systime_t last_direction_time; //[ms]
 static int lateral_distance = 0; //[cm]
@@ -82,7 +82,7 @@ void dog_mode_setUp(void)
 }
 
 void playTheDog(void)
-{	
+{
 	if(state == STAND_BY)
 	{
 		if(state_change)
@@ -180,7 +180,7 @@ void compute_trajectory(void)
 				
 				state = AVOIDING;
 			}
-			new_direction_flag = 1;
+			new_direction_flag = TRUE;
 		}
 	}
 }
@@ -191,7 +191,7 @@ void follow_trajectory(void)
 
 	if(new_direction_flag)
 	{
-		new_direction_flag = 0;
+		new_direction_flag = FALSE;
 		lateral_distance = 0;
 	}
 }
