@@ -161,7 +161,9 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		{
 			value_input_time = ST2MS(chVTGetSystemTime())-last_value_input_time;
 
-			if(value_input_time<=20)
+			chprintf((BaseSequentialStream *)&SD3, "value_input_time=%d\n", value_input_time);
+
+			if(value_input_time <= 146)
 			{
 				if(!decided_side_flag)
 				{
@@ -380,7 +382,7 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 
 void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < 12000) { //semble être suffisant
+	if(mic_amp_output[0] < 8000) { //semble être suffisant
 		mic_amp_output[0] = 0;
 		mic_amp_output[1] = 0;
 	}
