@@ -45,6 +45,9 @@ static int phase_side_tab[PHASE_SAMPLES];
 static int decided_side;
 static int decided_side_flag = FALSE;
 
+static systime_t value_input_time=0;
+static systime_t last_value_input_time=0;
+
 static bool got_new_direction_flag = FALSE;
 
 static int new_angle_flag = 0;
@@ -156,30 +159,37 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 		if(high_amps[0] !=0)
 		{
-			if(!decided_side_flag)
-			{
-				phase_final = phase_calcul(MAX_FREQ); // calcul de phase
+			value_input_time = ST2MS(chVTGetSystemTime())-last_value_input_time;
 
-				phase_tab[compteur] = phase_final;
-				phase_side_tab[compteur] = (sec_amps[1]>=sec_amps[0]); // 1 if front is higher than back
-
-				compteur++;
-			}
-			else
+			if(value_input_time<=20)
 			{
-				if(decided_side == (sec_amps[1]>=sec_amps[0]))
+				if(!decided_side_flag)
 				{
 					phase_final = phase_calcul(MAX_FREQ); // calcul de phase
 
 					phase_tab[compteur] = phase_final;
+					phase_side_tab[compteur] = (sec_amps[1]>=sec_amps[0]); // 1 if front is higher than back
 
 					compteur++;
 				}
-			}
+				else
+				{
+					if(decided_side == (sec_amps[1]>=sec_amps[0]))
+					{
+						phase_final = phase_calcul(MAX_FREQ); // calcul de phase
 
-			chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
-			chprintf((BaseSequentialStream *)&SD3, "decided_side=%d\n", decided_side);
-			chprintf((BaseSequentialStream *)&SD3, "(sec_amps[1]>=sec_amps[0])=%d\n", (sec_amps[1]>=sec_amps[0]));
+						phase_tab[compteur] = phase_final;
+
+						compteur++;
+					}
+				}
+			}
+			else 
+			{
+				compteur=0;
+				decided_side_flag = FALSE;
+			}
+			last_value_input_time = ST2MS(chVTGetSystemTime());
 			
 			//chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
 			//chprintf((BaseSequentialStream *)&SD3, "Front Mic amplitude=%f\n", sec_amps[1]);
