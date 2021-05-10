@@ -38,6 +38,9 @@ static float phase_moyenne=0;
 static float angle_moyenne=0;
 static float phase_old=0;
 
+static systime_t value_input_time=0;
+static systime_t last_value_input_time=0;
+
 static bool got_new_direction_flag = FALSE;
 
 static int new_angle_flag = 0;
@@ -153,16 +156,23 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 				*/
 
 				if(high_amps[0] !=0){
-					phase_final = phase_calcul(MAX_FREQ); // calcul de phase
-					phase_moyenne = phase_final+phase_moyenne;	//!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
-					//chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
-					compteur++;
-					//chprintf((BaseSequentialStream *)&SD3, "Front Mic amplitude=%f\n", sec_amps[1]);
-					//chprintf((BaseSequentialStream *)&SD3, "Back Mic amplitude=%f\n\n", sec_amps[0]);
-					//chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
+					value_input_time = ST2MS(chVTGetSystemTime())-last_value_input_time;
+					if(value_input_time<=20){
+						phase_final = phase_calcul(MAX_FREQ); // calcul de phase
+						phase_moyenne = phase_final+phase_moyenne;	//!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
+						//chprintf((BaseSequentialStream *)&SD3, "accumulation en cours=%f\n", angle_moyenne);
+						compteur++;
+						//chprintf((BaseSequentialStream *)&SD3, "Front Mic amplitude=%f\n", sec_amps[1]);
+						//chprintf((BaseSequentialStream *)&SD3, "Back Mic amplitude=%f\n\n", sec_amps[0]);
+						//chprintf((BaseSequentialStream *)&SD3, "compteur=%d\n", compteur);
+					} else {
+						compteur=0;
+						phase_moyenne=0;
+					}
+					last_value_input_time=ST2MS(chVTGetSystemTime());
 				}
 
-				if((compteur == 5)){	//envoyer angle
+				if((compteur == 4)){	//envoyer angle
 					phase_moyenne = phase_moyenne/5;
 					chprintf((BaseSequentialStream *)&SD3, "phase moyenne=%f\n", phase_moyenne); //!!!!!!!!!!!!!!!!!!!!!!!ATTENTION!!!!!!!!!!!!!!!!!!!!!! Pour les tests, angle_moyenne = phase moyenne
 					angle_moyenne = angle_calcul(phase_moyenne);
