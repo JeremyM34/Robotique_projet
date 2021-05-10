@@ -9,14 +9,15 @@
 #include <motors.h>
 
 #define DEDTORAD(n)	n * M_PI / 180
+#define RADTODEG(n)	n * 180 / M_PI
 #define USTOS(n)	n/1000000.
 
 #define NSTEP_ONE_TURN      1000 		// number of step for 1 turn of the motor
 #define WHEEL_PERIMETER     12.8 		// [cm]
 #define	WHEEL_TO_WHEEL_DIST	5.31		// [cm]
 
-#define Kp	2		//Proportional term (error to e_puck rotation speed)
-#define Ki	0.2		//Integral term (regulate perpendicular drift from initial straight line to direction)
+#define Kp		2	//Proportional term (error to e_puck rotation speed)
+#define Ki		0.2	//Integral term (regulate perpendicular drift from initial straight line to direction)
 #define Kspeed	10	//Proportional term (regulate front speed depending on direction error)
 
 #define MAX_REFERENCE_ANGLE M_PI/4 		// [rad] Maximal reference to follow to compensate perpendicular drift
@@ -103,7 +104,12 @@ void stop(void)
 
 float get_actual_error(void)
 {
-	return alpha_error*180/M_PI;
+	return RADTODEG(alpha_error); //[deg]
+}
+
+float get_actual_w_z(void)
+{
+	return RADTODEG(w_z); //[deg/s]
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

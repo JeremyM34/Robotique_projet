@@ -12,18 +12,19 @@
 #include <leds.h>
 #include <spi_comm.h>
 
-#define AVOIDANCE_TIMEOUT		1.5	//[s]
-#define TIME_BETWEEN_OBSTACLE	0.5	//[s]
-#define THRESHOLD_FOLLOW_ANGLE	50	//[deg]
-#define WALL_FOLLOW_DISTANCE	4	//[cm]
+#define AVOIDANCE_TIMEOUT		1.5		//[s]
+#define TIME_BETWEEN_OBSTACLE	0.5		//[s]
+#define THRESHOLD_FOLLOW_ANGLE	50		//[deg]
+#define WALL_FOLLOW_DISTANCE	4		//[cm]
+#define THRESHOLD_FOLLOW_W_W	5		//[deg/s] The e-puck avoids following a new trajectory if it rotational speed is above this limit.
 
 #define BODY_LED_PWM_FREQ		10000	//[Hz]
-#define BODY_LED_PWM_PERIOD		50	//[in ticks]
-#define BODY_LED_PULSE_SPEED_FACTOR	600. //[/ms] body_led glows from off to on in 1000/speed_factor seconds
+#define BODY_LED_PWM_PERIOD		50		//[in ticks]
+#define BODY_LED_PULSE_SPEED_FACTOR	600.//[/ms] body_led glows from off to on in 1000/speed_factor seconds
 #define DUTY_CYCLE_MAX			10000
-#define MINIMUM_DUTY_CYCLE		200 //[0 - DUTY_CYCLE_MAX]
+#define MINIMUM_DUTY_CYCLE		200 	//[0 - DUTY_CYCLE_MAX]
 
-#define UPSET_LED_TOGGLE_TIME	400 //[ms]
+#define UPSET_LED_TOGGLE_TIME	400 	//[ms]
 
 #define STOMS(n)	n*1000
 
@@ -136,14 +137,17 @@ void playTheDog(void)
 		follow_trajectory();
 		led_showDirection();
 	}
-	
+
 	if(get_sound_angle(&direction_error))
 	{
-		new_direction_flag = 1;
-		last_direction_time = ST2MS(chVTGetSystemTime());
+		if(state == STAND_BY || state == UPSET || (get_actual_w_z()<5))
+		{
+			new_direction_flag = 1;
+			last_direction_time = ST2MS(chVTGetSystemTime());
 
-		state = FOLLOWING;
-		state_change = TRUE;
+			state = FOLLOWING;
+			state_change = TRUE;	
+		}
 	}
 }
 

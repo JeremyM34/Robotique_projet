@@ -22,4 +22,6 @@ void stop(void);
 
 float get_actual_error(void);
 
+float get_actual_w_z(void);
+
 #endif /* MOTOR_CONTROLLER_H */
