@@ -19,13 +19,13 @@ typedef enum {
 
 void sound_direction_setUp(void);
 
-void compare_amp(float* amplitude_input, int* order_input);
+void compare_amp(float* amplitude_input);
 
-float phase_calcul(uint16_t position);
+float phase_calcul(uint8_t micro_selection, uint8_t position);
 
 int get_sound_angle(float* sound_direction);
 
-float angle_calcul(float phase);
+float angle_calcul(float dephasage, uint8_t micro_selection);
 
 void processAudioData(int16_t *data, uint16_t num_samples);
 
