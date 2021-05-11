@@ -41,12 +41,13 @@ int main(void)
 
 
 //////////////////////////
-    dog_mode_setUp();
-
-    while(1){
-        playTheDog();
-    }
+    dog_mode_setUp(); //Initialize everything and starts the main thread
 //////////////////////////
+
+    while (1) {
+		chThdSleepMilliseconds(1000);
+	}
+
 }
 
 #define STACK_CHK_GUARD 0xe2dee396

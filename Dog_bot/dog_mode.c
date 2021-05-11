@@ -39,6 +39,9 @@ static bool new_direction_flag = FALSE;
 static systime_t last_direction_time; //[ms]
 static int lateral_distance = 0; //[cm]
 
+static THD_WORKING_AREA(waPlayTheDog, 512);
+static THD_FUNCTION(PlayTheDog, arg);
+
 ///////////////////////////
 ////// BODY LED PWM ///////
 ///////////////////////////
@@ -80,74 +83,89 @@ void dog_mode_setUp(void)
 	pwmEnableChannel(&PWMD5, 0, 0);
 
 	last_direction_time = ST2MS(chVTGetSystemTime());
+
+	chThdCreateStatic(waPlayTheDog, sizeof(waPlayTheDog), NORMALPRIO, PlayTheDog, NULL);
 }
 
-void playTheDog(void)
+static THD_FUNCTION(PlayTheDog, arg)
 {
-	if(state == STAND_BY)
-	{
-		if(state_change)
-		{
-			clear_leds();
-			set_front_led(0);
-			pwmEnablePeriodicNotification(&PWMD5); // Activate PWM for the body LED
-			pwmEnableChannelNotification(&PWMD5, 0);
-			stop();
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
 
-			state_change = FALSE;
+	systime_t time;
+
+	while(1){
+		time = chVTGetSystemTime();
+
+		if(state == STAND_BY)
+		{
+			if(state_change)
+			{
+				clear_leds();
+				set_front_led(0);
+				pwmEnablePeriodicNotification(&PWMD5); // Activate PWM for the body LED
+				pwmEnableChannelNotification(&PWMD5, 0);
+				stop();
+
+				state_change = FALSE;
+			}
+
+			led_standBy();
+		}
+		else if(state == UPSET)
+		{
+			if(state_change)
+			{
+				set_front_led(0);
+				pwmDisablePeriodicNotification(&PWMD5);
+				pwmDisableChannelNotification(&PWMD5, 0);
+				stop();
+				led_showUpset(1);
+
+				state_change = FALSE;
+			}
+
+			led_showUpset(0);
+		}
+		else if(state == FOLLOWING || state == AVOIDING)
+		{
+			if(state_change)
+			{
+				pwmDisablePeriodicNotification(&PWMD5);
+				pwmDisableChannelNotification(&PWMD5, 0);
+				state_change = FALSE;
+			}
+
+			systime_t direction_timeout = STOMS(FOLLOWING_TIMEOUT);
+			systime_t directionAge = ST2MS(chVTGetSystemTime()) - last_direction_time;
+
+			if(state == AVOIDING)
+				direction_timeout = STOMS(AVOIDANCE_TIMEOUT);
+
+			if(directionAge > direction_timeout)
+			{
+				state = STAND_BY;
+				state_change = TRUE;
+			}
+
+			compute_trajectory();
+			follow_trajectory();
+			led_showDirection();
 		}
 
-		led_standBy();
-	}
-	else if(state == UPSET)
-	{
-		if(state_change)
+		if(get_sound_angle(&direction_error))
 		{
-			set_front_led(0);
-			stop();
-			led_showUpset(1);
+			if(state == STAND_BY || state == UPSET || (get_actual_w_z()<5))
+			{
+				new_direction_flag = 1;
+				last_direction_time = ST2MS(chVTGetSystemTime());
 
-			state_change = FALSE;
+				state = FOLLOWING;
+				state_change = TRUE;
+			}
 		}
-
-		led_showUpset(0);
-	}
-	else if(state == FOLLOWING || state == AVOIDING)
-	{
-		if(state_change)
-		{
-			pwmDisablePeriodicNotification(&PWMD5); // Activate PWM for the body LED
-			pwmDisableChannelNotification(&PWMD5, 0);
-			state_change = FALSE;
-		}
-
-		systime_t direction_timeout = STOMS(FOLLOWING_TIMEOUT);
-		systime_t directionAge = ST2MS(chVTGetSystemTime()) - last_direction_time;
-
-		if(state == AVOIDING)
-			direction_timeout = STOMS(AVOIDANCE_TIMEOUT);
-
-		if(directionAge > direction_timeout)
-		{
-			state = STAND_BY;
-			state_change = TRUE;
-		}
-
-		compute_trajectory();
-		follow_trajectory();
-		led_showDirection();
-	}
-
-	if(get_sound_angle(&direction_error))
-	{
-		if(state == STAND_BY || state == UPSET || (get_actual_w_z()<5))
-		{
-			new_direction_flag = 1;
-			last_direction_time = ST2MS(chVTGetSystemTime());
-
-			state = FOLLOWING;
-			state_change = TRUE;	
-		}
+	
+		chThdSleepUntilWindowed(time, time + MS2ST(10));
 	}
 }
 
