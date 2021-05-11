@@ -18,10 +18,10 @@ CONDVAR_DECL(bus_condvar);
 static void serial_start(void)
 {
 	static SerialConfig ser_cfg = {
-	    115200,
-	    0,
-	    0,
-	    0,
+        115200,
+        0,
+        0,
+        0,
 	};
 
 	sdStart(&SD3, &ser_cfg); // UART3.
@@ -36,17 +36,17 @@ int main(void)
 
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
-    //starts the serial communication
     serial_start();
-    //starts the USB communication
     usb_start();
 
+
+//////////////////////////
     dog_mode_setUp();
 
     while(1){
-    	playTheDog();
-    	//chprintf((BaseSequentialStream *) &SD3, "test \n");
+        playTheDog();
     }
+//////////////////////////
 }
 
 #define STACK_CHK_GUARD 0xe2dee396

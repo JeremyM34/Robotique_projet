@@ -191,7 +191,7 @@ void compute_trajectory(void)
 
 void follow_trajectory(void)
 {
-	goTo(direction_error, new_direction_flag, lateral_distance);
+	//goTo(direction_error, new_direction_flag, lateral_distance);
 
 	if(new_direction_flag)
 	{
