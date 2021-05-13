@@ -18,20 +18,8 @@ typedef enum {
 } BUFFER_NAME_t;
 
 void sound_direction_setUp(void);
-
-void compare_amp(float* amplitude_input);
-
-float phase_calcul(uint8_t micro_selection, uint8_t position);
-
 int get_sound_angle(float* sound_direction);
 
-float angle_calcul(float dephasage, uint8_t micro_selection);
-
-void processAudioData(int16_t *data, uint16_t num_samples);
-
-float passe_bande(uint8_t position, float mic_amp_output);
-
-void filtre_amp(float* mic_amp_output);
 /*
 *	Returns the pointer to the BUFFER_NAME_t buffer asked
 */
