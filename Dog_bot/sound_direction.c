@@ -204,12 +204,25 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			back_amp_average/=PHASE_SAMPLES;
 			//chprintf((BaseSequentialStream *)&SD3, "back_amp_init=%f\n", back_amp_average);
 			front_amp_average/=PHASE_SAMPLES;
-			//chprintf((BaseSequentialStream *)&SD3, "front_amp_init=%f\n", front_amp_average);
+			//chprintf((BaseSequentialStream *)&SD3, "front_amp_init=%f\n\n", front_amp_average);
 
 			amps_average[0]= right_amp_average;
 			amps_average[1]= left_amp_average;
 			amps_average[2]= back_amp_average;
 			amps_average[3]= front_amp_average;
+
+			/*
+			chprintf((BaseSequentialStream *)&SD3, "----------INPUT 1---------\n");
+
+			chprintf((BaseSequentialStream *)&SD3, "order in right =%d\n", order_in[0]);
+			chprintf((BaseSequentialStream *)&SD3, "input right =%f\n", amps_average[0]);
+			chprintf((BaseSequentialStream *)&SD3, "order in left =%d\n", order_in[1]);
+			chprintf((BaseSequentialStream *)&SD3, "input left =%f\n", amps_average[1]);
+			chprintf((BaseSequentialStream *)&SD3, "order in back =%d\n", order_in[2]);
+			chprintf((BaseSequentialStream *)&SD3, "input back =%f\n", amps_average[2]);
+			chprintf((BaseSequentialStream *)&SD3, "order in front =%d\n", order_in[3]);
+			chprintf((BaseSequentialStream *)&SD3, "input front =%f\n\n", amps_average[3]);
+			*/
 
 			compare_amp(amps_average); // donne la bonne paire de micro
 
@@ -217,10 +230,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 				phase_moyenne += phase_calcul(order_out[0], b); //donne le numéro du micro sélectionné
 			}
 			phase_moyenne /= PHASE_SAMPLES;
-			//chprintf((BaseSequentialStream *)&SD3, "phase=%f\n\n", phase_moyenne);
 			chprintf((BaseSequentialStream *)&SD3, "phase moyenne=%f\n", phase_moyenne);
 			angle_moyenne = angle_calcul(phase_moyenne, order_out[0]);
-			//chprintf((BaseSequentialStream *)&SD3, "unfiltered phase =%f\n", phase);
 			chprintf((BaseSequentialStream *)&SD3, "angle=%f\n\n", angle_moyenne);
 			compteur=0;
 			phase_moyenne=0; //enlever quand on utilise le return
@@ -260,12 +271,27 @@ void compare_amp(float* amplitude_input){
 	static int c;
 
 	static float list_amps[4]; //for amps manipulation only
-	static float list_order[4];
+	static int list_order[4];
 
 	for(uint8_t k=0; k<=3; ++k){
 		list_amps[k]=amplitude_input[k];
 		list_order[k]=order_in[k];
+		//chprintf((BaseSequentialStream *)&SD3, "order_in =%d\n", order_in[k]);
+		//chprintf((BaseSequentialStream *)&SD3, "list_order =%d\n", list_order[k]);
 	}
+	/*
+	chprintf((BaseSequentialStream *)&SD3, "\n");
+	chprintf((BaseSequentialStream *)&SD3, "----------INPUT 2---------\n");
+
+	chprintf((BaseSequentialStream *)&SD3, "order in right =%d\n", list_order[0]);
+	chprintf((BaseSequentialStream *)&SD3, "input right =%f\n", list_amps[0]);
+	chprintf((BaseSequentialStream *)&SD3, "order in left =%d\n",list_order[1]);
+	chprintf((BaseSequentialStream *)&SD3, "input left =%f\n", list_amps[1]);
+	chprintf((BaseSequentialStream *)&SD3, "order in back =%d\n", list_order[2]);
+	chprintf((BaseSequentialStream *)&SD3, "input back =%f\n", list_amps[2]);
+	chprintf((BaseSequentialStream *)&SD3, "order in front =%d\n", list_order[3]);
+	chprintf((BaseSequentialStream *)&SD3, "input front =%f\n\n", list_amps[3]);
+	*/
 	for(uint8_t j=0; j<=3; ++j) {
 		for(uint8_t i=0; i<=3; ++i) {
 			if(i!=j){
@@ -280,31 +306,34 @@ void compare_amp(float* amplitude_input){
 			}
 		}
 	}
-/*
-	chprintf((BaseSequentialStream *)&SD3, "Later\n");
-	for(c=0;c<=3;++c){
-	chprintf((BaseSequentialStream *)&SD3, "order=%d\n", list_order[c]); //unsigned integer
-	chprintf((BaseSequentialStream *)&SD3, "amplitude=%f\n", list_amps[c]);
-	}
 
-	chprintf((BaseSequentialStream *)&SD3, "\n");
-	*/
-	if(list_order[3]==0 || list_order[3]==1){ 	//FRONT - BACK
+	chprintf((BaseSequentialStream *)&SD3, "----------OUTPUT---------\n");
+	if(list_order[0]==0 || list_order[0]==1){ 	//FRONT - BACK			On elimine les amplitudes les plus fortes
 		order_out[0]=order_in[2]; 		//on retient les amplitudes intermédiaires
 		mid_amps[0]=amplitude_input[2];
 		order_out[1]=order_in[3];
 		mid_amps[1]=amplitude_input[3];
 		sec_amps[0] = amplitude_input[0]; //pour le calcul d'angle
 		sec_amps[1] = amplitude_input[1];
+		chprintf((BaseSequentialStream *)&SD3, "FRONT-BACK\n");
 	}
-	else if(list_order[3]==2 || list_order[3]==3){	//LEFT - RIGHT
+	else if(list_order[0]==2 || list_order[0]==3){	//LEFT - RIGHT
 		order_out[0]=order_in[0]; 		//on retient les amplitudes intermédiaires
 		mid_amps[0]=amplitude_input[0];
 		order_out[1]=order_in[1];
 		mid_amps[1]=amplitude_input[1];
 		sec_amps[0] = amplitude_input[2];
 		sec_amps[1] = amplitude_input[3];
+		chprintf((BaseSequentialStream *)&SD3, "RIGHT-LEFT\n");
 	}
+	/*
+	chprintf((BaseSequentialStream *)&SD3, "order 0=%d\n", order_out[0]);
+	chprintf((BaseSequentialStream *)&SD3, "mid amps 0=%f\n", mid_amps[0]);
+	chprintf((BaseSequentialStream *)&SD3, "order 1=%d\n", order_out[1]);
+	chprintf((BaseSequentialStream *)&SD3, "mid amps 1=%f\n", mid_amps[1]);
+	chprintf((BaseSequentialStream *)&SD3, "secondary amps 0=%f\n", sec_amps[0]);
+	chprintf((BaseSequentialStream *)&SD3, "secondary amps 1=%f\n\n", sec_amps[1]);
+	*/
 	/*
 	chprintf((BaseSequentialStream *)&SD3, "order 0=%d\n", order_out[0]); //unsigned integer
 	chprintf((BaseSequentialStream *)&SD3, "amplitude 0=%f\n", mid_amps[0]);
@@ -364,7 +393,7 @@ float passe_bande(uint8_t position, float mic_amp_output) {
 
 void filtre_amp(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < 4000 || mic_amp_output[1] < 4000) { //semble être suffisant
+	if(mic_amp_output[0] < 8000 || mic_amp_output[1] < 8000) { //semble être suffisant
 		mic_amp_output[0] = 0;
 		mic_amp_output[1] = 0;
 	}
