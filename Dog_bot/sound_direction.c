@@ -439,9 +439,9 @@ float angle_calcul(float dephasage, uint8_t micro_selection) { // angle en degrÃ
 			angle = 180*asinf(conditionFB)/M_PI;
 			//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
 			if(sec_amps[0]>=sec_amps[1]){ // Right > Left
-				angle = 90 + angle;
+				angle = 90 + 4 + angle;
 			} else {
-				angle = -90 - angle;
+				angle = -90 + 4 - angle;
 			}
 		}
 
