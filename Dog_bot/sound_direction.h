@@ -1,9 +1,6 @@
 #ifndef SOUND_DIRECTION_H
 #define SOUND_DIRECTION_H
 
-
-#define FFT_SIZE 	1024
-
 typedef enum {
 	//2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 	LEFT_CMPLX_INPUT = 0,
@@ -18,11 +15,8 @@ typedef enum {
 } BUFFER_NAME_t;
 
 void sound_direction_setUp(void);
+
 int get_sound_angle(float* sound_direction);
 
-/*
-*	Returns the pointer to the BUFFER_NAME_t buffer asked
-*/
-float* get_audio_buffer_ptr(BUFFER_NAME_t name);
 
 #endif /* SOUND_DIRECTION_H */

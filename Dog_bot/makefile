@@ -12,7 +12,6 @@ GLOBAL_PATH = ../../lib/e-puck2_main-processor
 CSRC += ./main.c \
 		./dog_mode.c \
 		./sound_direction.c \
-		./fft.c \
 		./mapper.c \
 		./motor_controller.c \
 		

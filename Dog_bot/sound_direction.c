@@ -6,13 +6,20 @@
 
 #include <audio/microphone.h>
 #include <sound_direction.h>
-#include <fft.h>
 #include <arm_math.h>
+#include <arm_const_structs.h>
 #include <math.h>
 
-#define PHASE_SAMPLES 	5	//mean of PHASE_SAMPLES values (amplitude) for more stability
-#define MIN_VALUE_THRESHOLD	8000 //amplitude filtering below this value
-#define MAX_FREQ		32	//500Hz
+#define PHASE_SAMPLES 				5		// mean of PHASE_SAMPLES values (amplitude) for more stability
+#define MIN_VALUE_THRESHOLD			8000 	// amplitude filtering below this value
+#define SCAN_FREQUENCY_NUM			32		// 500Hz
+#define SCAN_FREQUENCY				(SCAN_FREQUENCY_NUM * 15.625)
+#define FFT_SIZE 					1024
+#define MAX_TIME_BETWEEN_READING 	200 	// [ms]
+
+#define SOUND_SPEED					343		// [m/s]
+#define DISTANCE_M1_M2				0.0606	// [m]
+#define DISTANCE_M3_M4				0.055	// [m]
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
@@ -53,17 +60,36 @@ static bool got_new_direction_flag = FALSE;
 
 static int new_angle_flag = 0;
 
-// Private functions declaration
+////// PRIVATE FUNCTIONS ///////
 static void processAudioData(int16_t *data, uint16_t num_samples);
 static void filtre_amp(float* mic_amp_output);
 static void compare_amp(float* amplitude_input);
 static float phase_calcul(uint8_t micro_selection, uint8_t position);
 static float angle_calcul(float dephasage, uint8_t micro_selection);
+////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////// PUBLIC FUNCTIONS ///////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 void sound_direction_setUp(void)
 {
 	mic_start(&processAudioData);
 }
+
+int get_sound_angle(float* sound_direction){
+
+	*sound_direction = angle_moyenne;
+	new_angle_flag?got_new_direction_flag=TRUE:0;
+
+	return new_angle_flag;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////// PRIVATE FUNCTIONS //////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
 *	Callback called when the demodulation of the four microphones is done.
@@ -116,34 +142,23 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 
 	if(nb_samples >= (2 * FFT_SIZE))
 	{
-		/*	FFT processing
-		*
-		*	This FFT function stores the results in the input buffer given.
-		*
-		*/
+		//	FFT processing
+		arm_cfft_f32(&arm_cfft_sR_f32_len1024, micRight_cmplx_input, 0, 1);
+		arm_cfft_f32(&arm_cfft_sR_f32_len1024, micLeft_cmplx_input, 0, 1);
+		arm_cfft_f32(&arm_cfft_sR_f32_len1024, micBack_cmplx_input, 0, 1);
+		arm_cfft_f32(&arm_cfft_sR_f32_len1024, micFront_cmplx_input, 0, 1);
 
-		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
-
-		/*	Magnitude processing
-		*
-		*	Computes the magnitude of the complex numbers and
-		*	stores them in a buffer of FFT_SIZE because it only contains
-		*	real numbers.
-		*
-		*/
+		//	Magnitude processing
 		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
 
-		//Only keeps the amplitudes at 500Hz
-		amps_in[0]= micRight_output[MAX_FREQ];
-		amps_in[1]= micLeft_output[MAX_FREQ];
-		amps_in[2]= micBack_output[MAX_FREQ];
-		amps_in[3]= micFront_output[MAX_FREQ];
+		//Only keeps the amplitudes at SCAN_FREQUENCY
+		amps_in[0]= micRight_output[SCAN_FREQUENCY_NUM];
+		amps_in[1]= micLeft_output[SCAN_FREQUENCY_NUM];
+		amps_in[2]= micBack_output[SCAN_FREQUENCY_NUM];
+		amps_in[3]= micFront_output[SCAN_FREQUENCY_NUM];
 
 		// amplitude filter to eliminate low parasitic sound
 		filtre_amp(amps_in);
@@ -153,22 +168,22 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 			systime_t timenow = ST2MS(chVTGetSystemTime());	//regulation of time between inputs: if the time is too long, it is considered parasitic and won't be taken into account.
 			value_input_time = timenow-last_value_input_time;
 
-			if(value_input_time <= 500)
+			if(value_input_time <= MAX_TIME_BETWEEN_READING)
 			{
 				//Copy of values for later use (mean value for amplitude, phase calculation for FFT)
-				FFT_tab[8*compteur]=micRight_cmplx_input[2*MAX_FREQ];
-				FFT_tab[8*compteur+1]=micRight_cmplx_input[2*MAX_FREQ+1];
-				FFT_tab[8*compteur+2]=micLeft_cmplx_input[2*MAX_FREQ];
-				FFT_tab[8*compteur+3]=micLeft_cmplx_input[2*MAX_FREQ+1];
-				FFT_tab[8*compteur+4]=micBack_cmplx_input[2*MAX_FREQ];
-				FFT_tab[8*compteur+5]=micBack_cmplx_input[2*MAX_FREQ+1];
-				FFT_tab[8*compteur+6]=micFront_cmplx_input[2*MAX_FREQ];
-				FFT_tab[8*compteur+7]=micFront_cmplx_input[2*MAX_FREQ+1];
+				FFT_tab[8*compteur]=micRight_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*compteur+1]=micRight_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*compteur+2]=micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*compteur+3]=micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*compteur+4]=micBack_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*compteur+5]=micBack_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*compteur+6]=micFront_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*compteur+7]=micFront_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
 
-				amp_tab[4*compteur] = micRight_output[MAX_FREQ];
-				amp_tab[4*compteur+1] = micLeft_output[MAX_FREQ];
-				amp_tab[4*compteur+2] = micBack_output[MAX_FREQ];
-				amp_tab[4*compteur+3] = micFront_output[MAX_FREQ];
+				amp_tab[4*compteur] = micRight_output[SCAN_FREQUENCY_NUM];
+				amp_tab[4*compteur+1] = micLeft_output[SCAN_FREQUENCY_NUM];
+				amp_tab[4*compteur+2] = micBack_output[SCAN_FREQUENCY_NUM];
+				amp_tab[4*compteur+3] = micFront_output[SCAN_FREQUENCY_NUM];
 
 				compteur++;
 			}
@@ -351,8 +366,8 @@ static float angle_calcul(float dephasage, uint8_t micro_selection) {
 	float angle=0;
 
 	//sinus of the angle in radians
-	float conditionLR=dephasage*(346./500.)/(2*M_PI*0.0606);	//The distance between each pair is not equal (the microphones are not symmetrical)
-	float conditionFB=dephasage*(346./500.)/(2*M_PI*0.055);
+	float conditionLR=dephasage*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M1_M2);	//The distance between each pair is not equal (the microphones are not symmetrical)
+	float conditionFB=dephasage*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M3_M4);
 
 	//sets all improbable sinus values to 1 or -1
 	if(conditionLR < -1){
@@ -419,12 +434,4 @@ static float angle_calcul(float dephasage, uint8_t micro_selection) {
 	}
 
 	return angle;
-}
-
-int get_sound_angle(float* sound_direction){
-
-	*sound_direction = angle_moyenne;
-	new_angle_flag?got_new_direction_flag=TRUE:0;
-
-	return new_angle_flag;
 }
