@@ -238,7 +238,6 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			new_angle_flag = 1;
 			got_new_direction_flag = FALSE;
 		}
-
 		/*
 		if(high_amps[0] !=0){
 			phase_final = phase_calcul(MAX_FREQ); // calcul de phase
@@ -279,7 +278,7 @@ void compare_amp(float* amplitude_input){
 		//chprintf((BaseSequentialStream *)&SD3, "order_in =%d\n", order_in[k]);
 		//chprintf((BaseSequentialStream *)&SD3, "list_order =%d\n", list_order[k]);
 	}
-	/*
+
 	chprintf((BaseSequentialStream *)&SD3, "\n");
 	chprintf((BaseSequentialStream *)&SD3, "----------INPUT 2---------\n");
 
@@ -291,7 +290,7 @@ void compare_amp(float* amplitude_input){
 	chprintf((BaseSequentialStream *)&SD3, "input back =%f\n", list_amps[2]);
 	chprintf((BaseSequentialStream *)&SD3, "order in front =%d\n", list_order[3]);
 	chprintf((BaseSequentialStream *)&SD3, "input front =%f\n\n", list_amps[3]);
-	*/
+
 	for(uint8_t j=0; j<=3; ++j) {
 		for(uint8_t i=0; i<=3; ++i) {
 			if(i!=j){
@@ -309,6 +308,7 @@ void compare_amp(float* amplitude_input){
 
 	chprintf((BaseSequentialStream *)&SD3, "----------OUTPUT---------\n");
 	if(list_order[0]==0 || list_order[0]==1){ 	//FRONT - BACK			On elimine les amplitudes les plus fortes
+		if(list_order[3]==0 || list_order[3]==1){
 		order_out[0]=order_in[2]; 		//on retient les amplitudes intermédiaires
 		mid_amps[0]=amplitude_input[2];
 		order_out[1]=order_in[3];
@@ -316,8 +316,18 @@ void compare_amp(float* amplitude_input){
 		sec_amps[0] = amplitude_input[0]; //pour le calcul d'angle
 		sec_amps[1] = amplitude_input[1];
 		chprintf((BaseSequentialStream *)&SD3, "FRONT-BACK\n");
+		} else {
+			order_out[0]=order_in[0]; 		//on retient les amplitudes intermédiaires
+			mid_amps[0]=amplitude_input[0];
+			order_out[1]=order_in[1];
+			mid_amps[1]=amplitude_input[1];
+			sec_amps[0] = amplitude_input[2];
+			sec_amps[1] = amplitude_input[3];
+			chprintf((BaseSequentialStream *)&SD3, "RIGHT-LEFT\n");
+		}
 	}
-	else if(list_order[0]==2 || list_order[0]==3){	//LEFT - RIGHT
+
+	else if((list_order[0]==2 || list_order[0]==3)&&(list_order[3]==2 || list_order[3]==3)){	//LEFT - RIGHT
 		order_out[0]=order_in[0]; 		//on retient les amplitudes intermédiaires
 		mid_amps[0]=amplitude_input[0];
 		order_out[1]=order_in[1];
@@ -325,23 +335,22 @@ void compare_amp(float* amplitude_input){
 		sec_amps[0] = amplitude_input[2];
 		sec_amps[1] = amplitude_input[3];
 		chprintf((BaseSequentialStream *)&SD3, "RIGHT-LEFT\n");
-	}
-	/*
+
 	chprintf((BaseSequentialStream *)&SD3, "order 0=%d\n", order_out[0]);
 	chprintf((BaseSequentialStream *)&SD3, "mid amps 0=%f\n", mid_amps[0]);
 	chprintf((BaseSequentialStream *)&SD3, "order 1=%d\n", order_out[1]);
 	chprintf((BaseSequentialStream *)&SD3, "mid amps 1=%f\n", mid_amps[1]);
 	chprintf((BaseSequentialStream *)&SD3, "secondary amps 0=%f\n", sec_amps[0]);
 	chprintf((BaseSequentialStream *)&SD3, "secondary amps 1=%f\n\n", sec_amps[1]);
-	*/
+	}
 	/*
 	chprintf((BaseSequentialStream *)&SD3, "order 0=%d\n", order_out[0]); //unsigned integer
 	chprintf((BaseSequentialStream *)&SD3, "amplitude 0=%f\n", mid_amps[0]);
 	chprintf((BaseSequentialStream *)&SD3, "order 1=%d\n", order_out[1]); //unsigned integer
 	chprintf((BaseSequentialStream *)&SD3, "amplitude 1=%f\n", mid_amps[1]);
 	*/
-}
 
+}
 
 float phase_calcul(uint8_t micro_selection, uint8_t position) {
 	float phase1;
@@ -401,14 +410,23 @@ void filtre_amp(float* mic_amp_output)
 
 float angle_calcul(float dephasage, uint8_t micro_selection) { // angle en degrés
 	float angle;
-	float condition=dephasage*(346./500.)/(2*M_PI*0.06);
-	if(condition < -1){
-		condition = -1;
-	} else if(condition>1){
-		condition = 1;
+	float conditionLR=dephasage*(346./500.)/(2*M_PI*0.0606);
+	float conditionFB=dephasage*(346./500.)/(2*M_PI*0.055);
+	if(conditionLR < -1){
+		conditionLR = -1;
+	} else if(conditionLR>1){
+		conditionLR = 1;
 	}
-		angle = 180*asinf(condition)/M_PI;
-		if(micro_selection==0){ //Right - Left
+	if(conditionFB < -1){
+		conditionFB = -1;
+	} else if(conditionFB>1){
+		conditionFB = 1;
+	}
+
+	if(micro_selection==0){ //Right - Left
+			//chprintf((BaseSequentialStream *)&SD3, "condition=%f\n", conditionLR);
+			angle = 180*asinf(conditionLR)/M_PI;
+			//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
 			if(sec_amps[0]>=sec_amps[1]){ //Back > Front
 				if(mid_amps[0]>=mid_amps[1]){	//Right > Left
 					angle = 180 - angle;
@@ -417,6 +435,9 @@ float angle_calcul(float dephasage, uint8_t micro_selection) { // angle en degr�
 				}
 			}
 		} else if(micro_selection==2) { // Back - Front
+			//chprintf((BaseSequentialStream *)&SD3, "condition=%f\n", conditionFB);
+			angle = 180*asinf(conditionFB)/M_PI;
+			//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n", angle);
 			if(sec_amps[0]>=sec_amps[1]){ // Right > Left
 				angle = 90 + angle;
 			} else {
