@@ -11,13 +11,13 @@
 #define RADTODEG(n)	n * 180 / M_PI
 #define DEGTORAD(n)	n * M_PI / 180
 
-#define DISTANCE_THRESHOLD 500 						//[in IR reading units], equal to around 2 [cm]
-#define PROX_VALUE_TO_DIST(n) 63.605*powf(n, -0.564)//[cm], IR value to distance, experimentally determined
-#define FRONT_IR_SENSOR_DISTANCE 3.43 				//[cm], distance from the center of the e-puck to the Front IR sensors
-#define LATERAL_IR_SENSOR_DISTANCE 3.29 			//[cm], distance from the center of the e-puck to the lateral IR sensors
-#define IR8_TO_IR1_ANGLE 34 						//[deg]
-#define IR1_TO_IR2_ANGLE 32 						//[deg]
-#define IR2_TO_IR3_ANGLE 41 						//[deg]
+#define DISTANCE_THRESHOLD 			500 	//[in IR reading units], equal to around 2 [cm]
+#define PROX_VALUE_TO_DIST(n) 		63.605*powf(n, -0.564)	//[cm], IR value to distance, experimentally determined
+#define FRONT_IR_SENSOR_DISTANCE 	3.43 	//[cm], distance from the center of the e-puck to the front IR sensors
+#define LATERAL_IR_SENSOR_DISTANCE 	3.29 	//[cm], distance from the center of the e-puck to the lateral IR sensors
+#define IR8_TO_IR1_ANGLE 			34 		//[deg]
+#define IR1_TO_IR2_ANGLE 			32 		//[deg]
+#define IR2_TO_IR3_ANGLE 			41 		//[deg]
 
 static messagebus_topic_t *proximity_topic;
 static proximity_msg_t prox_values;
@@ -55,13 +55,13 @@ bool compute_map(void)
 {
 	if(messagebus_topic_read(proximity_topic, &prox_values, sizeof(prox_values)))
 	{
-		int max_value_number = 0; //IR number with the closest obstacle
+		int8_t max_value_number = 0; //IR number with the closest obstacle
 		map_info.obstacle_flag = FALSE;
 
-		int real_IR_dist[PROXIMITY_NB_CHANNELS]; //not unsigned to avoid issue with negative value when the offset is substracted
+		int32_t real_IR_dist[PROXIMITY_NB_CHANNELS]; //not unsigned to avoid issue with negative value when the offset is substracted
 
 		/// Obstacle detection and IR sensor ranking ///
-		for(int i = 0; i < PROXIMITY_NB_CHANNELS; i++)
+		for(uint8_t i = 0; i < PROXIMITY_NB_CHANNELS; i++)
 		{
 			i==3?i=5:0; //Skip IR4 and IR5 as the e-puck goes forward
 
@@ -83,7 +83,7 @@ bool compute_map(void)
 		{
 			float min_distance = PROX_VALUE_TO_DIST(real_IR_dist[max_value_number]); // [cm], distance from the closest sensor to the obstacle
 
-			int secondary_max_value_number;
+			int8_t secondary_max_value_number;
 
 			// Selection of the secondary closest sensor //
 			if (real_IR_dist[(max_value_number+1)%PROXIMITY_NB_CHANNELS] > real_IR_dist[(max_value_number-1)%PROXIMITY_NB_CHANNELS])

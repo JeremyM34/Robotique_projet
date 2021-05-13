@@ -29,7 +29,6 @@ static void serial_start(void)
 
 int main(void)
 {
-
     halInit();
     chSysInit();
     mpu_init();
@@ -38,7 +37,6 @@ int main(void)
 
     serial_start();
     usb_start();
-
 
 //////////////////////////
     dog_mode_setUp(); //Initialize everything and starts the main thread

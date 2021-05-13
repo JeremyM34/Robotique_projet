@@ -1,19 +1,13 @@
 #ifndef DOG_MODE_H
 #define DOG_MODE_H
 
-#define FOLLOWING_TIMEOUT	7 //[s]
+#define FOLLOWING_TIMEOUT	10000 //[ms], Time after which the dog bot stop if there's not new direction or obstacle.
 
 enum STATES{STAND_BY, FOLLOWING, AVOIDING, UPSET};
 
+/*
+*	Wrapper to setup and start dog_bot, launches the main thread and the various sensors/actuators
+*/
 void dog_mode_setUp(void);
-
-void playTheDog(void);
-
-void compute_trajectory(void);
-void follow_trajectory(void);
-
-void led_showDirection(void);
-void led_showUpset(bool new_call);
-void led_standBy(void);
 
 #endif /* DOG_MODE_H */

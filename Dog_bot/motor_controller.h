@@ -11,9 +11,9 @@ void motor_controller_setUp(void);
 *	Params:
 *		- direction : angle [deg]  describing where to go (useful only when new direction to go is computed)
 *		- flag_new : 1 if the direction is new, 0 if not.
-		- lateral_distance : distance [cm], where the e-puck has to go laterally
+		- lateral_distance : distance [mm], where the e-puck has to go laterally
 */
-void goTo(float direction, bool flag_new, int lateral_distance);
+void goTo(float direction, bool flag_new, int8_t lateral_distance);
 
 /*
 *	Function to stop the motors.

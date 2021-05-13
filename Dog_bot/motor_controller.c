@@ -10,7 +10,6 @@
 
 #define DEDTORAD(n)	n * M_PI / 180
 #define RADTODEG(n)	n * 180 / M_PI
-#define USTOS(n)	n/1000000.
 
 #define NSTEP_ONE_TURN      1000 		// number of step for 1 turn of the motor
 #define WHEEL_PERIMETER     12.8 		// [cm]
@@ -64,9 +63,9 @@ void motor_controller_setUp(void)
 *	Params:
 *		- direction : angle [deg]  describing where to go (useful only when new direction to go is computed)
 *		- flag_new : 1 if the direction is new, 0 if not.
-		- lateral_distance : distance [cm], where the e-puck has to go laterally
+		- lateral_distance : distance [mm], where the e-puck has to go laterally
 */
-void goTo(float direction, bool flag_new, int lateral_distance)
+void goTo(float direction, bool flag_new, int8_t lateral_distance)
 {
 	//compute_dt(); - Not used anymore.
 
@@ -74,7 +73,7 @@ void goTo(float direction, bool flag_new, int lateral_distance)
 	{
 		initial_alpha_error = DEDTORAD(direction);
 		alpha_error = DEDTORAD(direction);
-		perpendicular_error = lateral_distance;
+		perpendicular_error = (float)lateral_distance/10; //[mm] to [cm]
 
 		left_motor_set_pos(0); //reset motor step counter for orientation and position determination
 		right_motor_set_pos(0);
