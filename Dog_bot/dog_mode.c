@@ -354,7 +354,7 @@ static void led_standBy(void)
 
 	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, duty_cycle));
 
-	uint8_t led_intensity = roundf(LED_DIMMING_FACTOR*(float)(duty_cycle - MINIMUM_DUTY_CYCLE) * 255/10000);
+	uint8_t led_intensity = roundf(TOP_LED_DIMMING_FACTOR * (float)(duty_cycle - MINIMUM_DUTY_CYCLE) * 255/10000);
 
 	set_rgb_led(LED2, 0, led_intensity, 0);
 	set_rgb_led(LED4, 0, led_intensity, 0);
