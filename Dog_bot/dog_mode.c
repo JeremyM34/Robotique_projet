@@ -20,16 +20,17 @@
 #define MIN_TIME_OBSTACLE			500		// [ms], minimum time between obstacle detection
 #define THRESHOLD_FOLLOW_ANGLE		60		// [deg], threshold angle (e-puck FRONT-BACK axis to obstacle perpendicular axis) over which the dog_bot prefers to follow an obstacle 
 #define WALL_FOLLOW_DISTANCE		20		// [mm]
-#define THRESHOLD_FOLLOW_W_Z		2		// [deg/s] The e-puck avoids following a new trajectory if it rotational speed is above this limit.
-#define MIN_TIME_NEW_DIR			500		// [ms] minimum time between each new direction call
+#define THRESHOLD_FOLLOW_W_Z		2		// [deg/s], the e-puck avoids following a new trajectory if it rotational speed is above this limit.
+#define MIN_TIME_NEW_DIR			500		// [ms], minimum time between each new direction call
 
 #define NUM_LEDS 					(NUM_RGB_LED + NUM_LED) //Total number of top leds
 #define BODY_LED_PWM_FREQ			10000	// [Hz]
 #define BODY_LED_PWM_PERIOD			50		// [in ticks]
 #define BODY_LED_PULSE_SPEED_FACTOR	1000	// [/ms] body_led glows from off to on in 1000/speed_factor seconds
 #define DUTY_CYCLE_MAX				10000	// PWM duty cycle
-#define MINIMUM_DUTY_CYCLE			200 	// [0 - DUTY_CYCLE_MAX] 
+#define MINIMUM_DUTY_CYCLE			200
 #define UPSET_LED_TOGGLE_TIME		400 	// [ms]
+#define TOP_LED_DIMMING_FACTOR		0.3		// dimming factor for the top green leds during stand_by mode pulses.
 
 enum STATES state = STAND_BY;
 static bool state_change_flag = TRUE;
@@ -344,7 +345,7 @@ static void led_showUpset(bool new_call_flag)
 }
 
 /*
-*	Wrapper to control the PWM duty cycle.
+*	Wrapper to control the PWM duty cycle and top green leds intensity.
 */
 static void led_standBy(void)
 {
@@ -352,6 +353,13 @@ static void led_standBy(void)
 							 * (DUTY_CYCLE_MAX - MINIMUM_DUTY_CYCLE)/2 + MINIMUM_DUTY_CYCLE;
 
 	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, duty_cycle));
+
+	uint8_t led_intensity = roundf(LED_DIMMING_FACTOR*(float)(duty_cycle - MINIMUM_DUTY_CYCLE) * 255/10000);
+
+	set_rgb_led(LED2, 0, led_intensity, 0);
+	set_rgb_led(LED4, 0, led_intensity, 0);
+	set_rgb_led(LED6, 0, led_intensity, 0);
+	set_rgb_led(LED8, 0, led_intensity, 0);
 }
 
 /////////////////////////////////////////////////////
