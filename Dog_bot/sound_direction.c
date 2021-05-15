@@ -309,11 +309,11 @@ static void compare_amp(float* amplitude_input){
 
 	// LEFT and RIGHT mics are selected
 	else if((list_order[0]==2 || list_order[0]==3)&&(list_order[3]==2 || list_order[3]==3)){	//LEFT - RIGHT
-		order_out[0]=order_in[0]; 		//on retient les amplitudes intermédiaires
+		order_out[0]=order_in[0]; 		//The medium amplitudes correspond to the selected mic pair
 		mid_amps[0]=amplitude_input[0];
 		order_out[1]=order_in[1];
 		mid_amps[1]=amplitude_input[1];
-		sec_amps[0] = amplitude_input[2];
+		sec_amps[0] = amplitude_input[2];	//The mic pair corresponding to the highest and lowest amplitudes will be used for the choice of formula for angle_calcul 
 		sec_amps[1] = amplitude_input[3];
 	}
 }
