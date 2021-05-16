@@ -1,7 +1,7 @@
 # DOG BOT
 Projet 2021 de Microinformatique
 
-<img src="/Médias/e-puck2.png" width="500">
+<img src="/Médias/e-puck2.png" width="350">
 
 Par *Gloria Mellinand* et *Jérémy Marciacq*
 
