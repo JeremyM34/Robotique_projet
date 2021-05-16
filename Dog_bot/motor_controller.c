@@ -16,7 +16,7 @@
 #define	WHEEL_TO_WHEEL_DIST	5.31		// [cm]
 
 #define Kp		2	//Proportional term (error to e_puck rotation speed)
-#define Ki		0.2	//Integral term (regulate lateral drift from initial straight line to direction)
+#define Kl		0.2	//Proportional term  for lateral_error(regulate lateral drift from initial straight line to direction)
 #define Kspeed	10	//Proportional term (regulate front speed depending on direction error)
 
 #define MAX_REFERENCE_ANGLE M_PI/4 		// [rad] Maximal reference to follow to compensate lateral drift
@@ -124,7 +124,7 @@ float get_actual_w_z(void)
 */
 void compute_controls(void)
 {
-	float reference_angle = -Ki * lateral_error;	//[rad], new reference to follow
+	float reference_angle = -Kl * lateral_error;	//[rad], new reference to follow
 
 	if(fabsf(reference_angle) > MAX_REFERENCE_ANGLE) // Limit to the reference
 		reference_angle = MAX_REFERENCE_ANGLE * reference_angle / fabsf(reference_angle);
