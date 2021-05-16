@@ -15,7 +15,7 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-static void serial_start(void)
+static void serial_start(void)  //For DEBUG
 {
 	static SerialConfig ser_cfg = {
         115200,
@@ -35,8 +35,8 @@ int main(void)
 
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
-    serial_start();
-    usb_start();
+    serial_start(); //For DEBUG
+    usb_start();    //For DEBUG
 
 //////////////////////////
     dog_mode_setUp(); //Initialize everything and starts the main thread
