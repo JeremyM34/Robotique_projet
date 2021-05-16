@@ -351,10 +351,7 @@ static float phase_calcul(uint8_t mic_selection, uint8_t position)
 static uint8_t amp_filter(float* mic_amp_output)
 {
 	if(mic_amp_output[0] < MIN_VALUE_THRESHOLD || mic_amp_output[1] < MIN_VALUE_THRESHOLD || mic_amp_output[2] < MIN_VALUE_THRESHOLD || mic_amp_output[3] < MIN_VALUE_THRESHOLD) {
-		mic_amp_output[0] = 0;	//values are considered parasitic and not taken into account
-		mic_amp_output[1] = 0;
-		mic_amp_output[2] = 0;
-		mic_amp_output[3] = 0;
+		//values are considered parasitic and not taken into account
 		return 0;
 	}
 	return 1;
