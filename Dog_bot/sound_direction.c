@@ -371,7 +371,7 @@ static float angle_calcul(float phase_shift, uint8_t mic_selection)
 		{
 			conditionLR = -1;
 		} 
-		else if(conditionLR>1)
+		else if(conditionLR > 1)
 		{
 			conditionLR = 1;
 		}
@@ -380,7 +380,7 @@ static float angle_calcul(float phase_shift, uint8_t mic_selection)
 
 		if(sec_amps[0]>=sec_amps[1])		// BACK > FRONT
 		{
-			if(mid_amps[0]>=mid_amps[1])		// RIGHT > LEFT
+			if(angle > 0)		// RIGHT > LEFT
 			{
 				angle = 180 - angle;
 			}
