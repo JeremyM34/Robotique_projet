@@ -19,7 +19,7 @@ typedef enum {
 
 void sound_direction_setUp(void);
 
-uint8_t get_sound_angle(float* sound_direction);
+bool get_sound_angle(float* sound_direction);
 
 
 #endif /* SOUND_DIRECTION_H */
