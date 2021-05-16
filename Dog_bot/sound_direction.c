@@ -34,7 +34,7 @@ static float amps_in[4];
 static uint8_t order_in[4] = {0, 1, 2, 3}; //order of mics: Right(0), Left(1), Back(2), Front(3)
 //Array of amplitude values out of compare_amp for mic selection: Two medium amplitudes, and their corresponding mic number
 static float mid_amps[2];
-static int order_out[2];
+static uint8_t order_out[2];
 // Array of secondary amplitudes from unused mics (Highest and lowest amplitudes). Used in angle_calcul
 static float sec_amps[2];
 //Phase calculation
@@ -56,11 +56,11 @@ static systime_t last_value_input_time=0;
 
 static bool got_new_direction_flag = FALSE;
 
-static int new_angle_flag = 0;
+static uint8_t new_angle_flag = 0;
 
 ////// PRIVATE FUNCTIONS ///////
 static void processAudioData(int16_t *data, uint16_t num_samples);
-static void amp_filter(float* mic_amp_output);
+static uint8_t amp_filter(float* mic_amp_output);
 static void compare_amp(float* amplitude_input);
 static float phase_calcul(uint8_t mic_selection, uint8_t position);
 static float angle_calcul(float phase_shift, uint8_t mic_selection);
@@ -74,7 +74,7 @@ void sound_direction_setUp(void)
 	mic_start(&processAudioData);
 }
 
-int get_sound_angle(float* sound_direction){
+uint8_t get_sound_angle(float* sound_direction){
 
 	*sound_direction = mean_angle;
 	new_angle_flag?got_new_direction_flag=TRUE:0;
@@ -113,7 +113,7 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 	*
 	*/
 
-	static uint16_t nb_samples = 0;
+	uint16_t nb_samples = 0;
 
 	//loop to fill the buffers
 	for(uint16_t i = 0 ; i < num_samples ; i+=4){
@@ -158,10 +158,7 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 		amps_in[2]= micBack_output[SCAN_FREQUENCY_NUM];
 		amps_in[3]= micFront_output[SCAN_FREQUENCY_NUM];
 
-		// amplitude filter to eliminate low parasitic sound
-		amp_filter(amps_in);
-
-		if(amps_in[0] !=0)
+		if(amp_filter(amps_in) !=0) // amplitude filter to eliminate low parasitic sound
 		{
 			systime_t timenow = ST2MS(chVTGetSystemTime());	//regulation of time between inputs: if the time is too long, it is considered parasitic and won't be taken into account.
 			value_input_time = timenow-last_value_input_time;
@@ -194,7 +191,7 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 
 		if(counter == PHASE_SAMPLES)
 		{
-			for(int a=0; a<PHASE_SAMPLES; a++)
+			for(uint8_t a=0; a<PHASE_SAMPLES; a++)
 			{
 				right_amp_average += amp_tab[4*a]; //amplitude accumulation for each mic
 				left_amp_average += amp_tab[4*a+1];
@@ -248,16 +245,14 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 static void compare_amp(float* amplitude_input)
 {
 	//for amplitude and mic order manipulation only
-	static float a=0;
-	static int b=0;
-	static float list_amps[4];
-	static int list_order[4];
+	float sub_var_amp =0;			//substitution variable for storing amplitude values
+	uint8_t sub_var_order =0;		//substitution variable for storing order values
+	float list_amps[4];				//array containing final sorted amplitudes
 
 	//copy so that there is no manipulation directly on the input values
 	for(uint8_t k=0; k<=3; ++k){
 
 		list_amps[k]=amplitude_input[k];
-		list_order[k]=order_in[k];
 
 	}
 
@@ -266,35 +261,35 @@ static void compare_amp(float* amplitude_input)
 		for(uint8_t i=0; i<=3; ++i) {
 			if(i!=j){
 				if(list_amps[i]<list_amps[j]) {
-					a=list_amps[i];
+					sub_var_amp=list_amps[i];
 					list_amps[i]=list_amps[j];
-					list_amps[j]=a;
-					b=list_order[i];
-					list_order[i]=list_order[j];
-					list_order[j]=b;
+					list_amps[j]=sub_var_amp;
+					sub_var_order=order_in[i];
+					order_in[i]=order_in[j];
+					order_in[j]=sub_var_order;
 				}
 			}
 		}
 	}
 
-	if(list_order[0]==0 || list_order[0]==1){
+	if(order_in[0]==0 || order_in[0]==1){
 		// if RIGHT or LEFT mics have the highest and lowest amplitudes, FRONT and BACK pair is selected.
 		// a double if condition is necessary because FRONT and BACK do not have the same area of contact with sound as LEFT and RIGHT
 		//LEFT and RIGHT both have the same area of contact so they are considered more reliable, therefore the default choice if the amplitudes from FRONT and BACK are inconsistent.
-		if(list_order[3]==0 || list_order[3]==1){
+		if(order_in[3]==0 || order_in[3]==1){
 
-			order_out[0] = order_in[2];
+			order_out[0] = 2;
 			mid_amps[0] = amplitude_input[2]; // Medium amplitudes corresponding to the selected pair
-			order_out[1] = order_in[3];
+			order_out[1] = 3;
 			mid_amps[1] = amplitude_input[3];
 			sec_amps[0] = amplitude_input[0]; //Highest and lowest amplitudes (unused pair)
 			sec_amps[1] = amplitude_input[1];
 
 		} else {		// if the double condition is not fulfilled, LEFT and RIGHT mics are selected
 
-			order_out[0] = order_in[0];
+			order_out[0] = 0;
 			mid_amps[0] = amplitude_input[0];
-			order_out[1] = order_in[1];
+			order_out[1] = 1;
 			mid_amps[1] = amplitude_input[1];
 			sec_amps[0] = amplitude_input[2];
 			sec_amps[1] = amplitude_input[3];
@@ -303,16 +298,20 @@ static void compare_amp(float* amplitude_input)
 	}
 
 	// LEFT and RIGHT mics are selected
-	else if((list_order[0]==2 || list_order[0]==3)&&(list_order[3]==2 || list_order[3]==3)){	//LEFT - RIGHT
-		order_out[0] = order_in[0]; 		//The medium amplitudes correspond to the selected mic pair
+	else if((order_in[0]==2 || order_in[0]==3)&&(order_in[3]==2 || order_in[3]==3)){	//LEFT - RIGHT
+		order_out[0] = 0; 		//The medium amplitudes correspond to the selected mic pair
 		mid_amps[0] = amplitude_input[0];
-		order_out[1] = order_in[1];
+		order_out[1] = 1;
 		mid_amps[1] = amplitude_input[1];
 		sec_amps[0] = amplitude_input[2];	//The mic pair corresponding to the highest and lowest amplitudes will be used for the choice of formula for angle_calcul
 		sec_amps[1] = amplitude_input[3];
 	}
-}
 
+	order_in[0] = 0;		//reset of order_in values for next call to compare_amps
+	order_in[1] = 1;
+	order_in[2] = 2;
+	order_in[3] = 3;
+}
 
 static float phase_calcul(uint8_t mic_selection, uint8_t position)
 {
@@ -349,45 +348,37 @@ static float phase_calcul(uint8_t mic_selection, uint8_t position)
 	return phase_shift;
 }
 
-static void amp_filter(float* mic_amp_output)
+static uint8_t amp_filter(float* mic_amp_output)
 {
-	if(mic_amp_output[0] < MIN_VALUE_THRESHOLD || mic_amp_output[1] < MIN_VALUE_THRESHOLD) {
+	if(mic_amp_output[0] < MIN_VALUE_THRESHOLD || mic_amp_output[1] < MIN_VALUE_THRESHOLD || mic_amp_output[2] < MIN_VALUE_THRESHOLD || mic_amp_output[3] < MIN_VALUE_THRESHOLD) {
 		mic_amp_output[0] = 0;	//values are considered parasitic and not taken into account
 		mic_amp_output[1] = 0;
+		mic_amp_output[2] = 0;
+		mic_amp_output[3] = 0;
+		return 0;
 	}
+	return 1;
 }
 
 static float angle_calcul(float phase_shift, uint8_t mic_selection)
 {
 	float angle=0;
 
-	//sinus of the angle in radians
-	float conditionLR=phase_shift*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M1_M2);	//The distance between each pair is not equal (the microphones are not symmetrical)
-	float conditionFB=phase_shift*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M3_M4);
-
-	//sets all improbable sinus values to 1 or -1
-	if(conditionLR < -1){
-
-		conditionLR = -1;
-
-	} else if(conditionLR>1){
-
-		conditionLR = 1;
-
-	}
-
-	if(conditionFB < -1){
-
-		conditionFB = -1;
-
-	} else if(conditionFB>1){
-
-		conditionFB = 1;
-
-	}
-
-	//RIGHT - BACK
+	//RIGHT - LEFT
 	if(mic_selection==0){
+
+		//sinus of the angle in radians
+		float conditionLR=phase_shift*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M1_M2);
+
+		if(conditionLR < -1){ //sets all improbable sinus values to 1 or -1
+
+			conditionLR = -1;
+
+		} else if(conditionLR>1){
+
+			conditionLR = 1;
+
+		}
 
 		angle = 180*asinf(conditionLR)/M_PI;
 
@@ -408,6 +399,19 @@ static float angle_calcul(float phase_shift, uint8_t mic_selection)
 	// BACK - FRONT
 	} else if(mic_selection==2) {
 
+		//sinus of the angle in radians
+		float conditionFB=phase_shift*(SOUND_SPEED/SCAN_FREQUENCY)/(2*M_PI*DISTANCE_M3_M4);
+
+		if(conditionFB < -1){	//sets all improbable sinus values to 1 or -1
+
+			conditionFB = -1;
+
+		} else if(conditionFB>1){
+
+			conditionFB = 1;
+
+		}
+
 		angle = 180*asinf(conditionFB)/M_PI;
 
 		if(sec_amps[0]>=sec_amps[1]){ // RIGHT > LEFT
@@ -419,13 +423,6 @@ static float angle_calcul(float phase_shift, uint8_t mic_selection)
 			angle = -90 + 4 - angle;
 
 		}
-
-	}
-
-
-	if(angle>180 || angle<-180){
-
-		angle=180;
 
 	}
 
