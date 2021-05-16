@@ -1,6 +1,9 @@
 #ifndef SOUND_DIRECTION_H
 #define SOUND_DIRECTION_H
 
+#define SCAN_FREQUENCY_NUM			32		// position in the FFT array, corresponds to 500Hz
+#define SCAN_FREQUENCY				(SCAN_FREQUENCY_NUM * 15.625)
+
 typedef enum {
 	//2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 	LEFT_CMPLX_INPUT = 0,

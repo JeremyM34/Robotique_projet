@@ -2,8 +2,8 @@
 #include "hal.h"
 #include <usbcfg.h>
 #include <chprintf.h>
-#include <main.h>
 #include <math.h>
+#include <main.h>
 
 #include <dog_mode.h>
 #include <sound_direction.h>
@@ -354,7 +354,7 @@ static void led_standBy(void)
 
 	pwmEnableChannel(&PWMD5, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD5, duty_cycle));
 
-	uint8_t led_intensity = roundf(TOP_LED_DIMMING_FACTOR * (float)(duty_cycle - MINIMUM_DUTY_CYCLE) * 255/10000);
+	uint8_t led_intensity = roundf(TOP_LED_DIMMING_FACTOR * (float)(duty_cycle - MINIMUM_DUTY_CYCLE) * 255/10000);	//duty cycle (MINIMUM_DUTY_CYCLE -> 10'000) to intensity (0 -> 255*TOP_LED_DIMMING_FACTOR)
 
 	set_rgb_led(LED2, 0, led_intensity, 0);
 	set_rgb_led(LED4, 0, led_intensity, 0);

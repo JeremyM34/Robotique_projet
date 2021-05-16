@@ -16,17 +16,17 @@
 #define	WHEEL_TO_WHEEL_DIST	5.31		// [cm]
 
 #define Kp		2	//Proportional term (error to e_puck rotation speed)
-#define Ki		0.2	//Integral term (regulate perpendicular drift from initial straight line to direction)
+#define Ki		0.2	//Integral term (regulate lateral drift from initial straight line to direction)
 #define Kspeed	10	//Proportional term (regulate front speed depending on direction error)
 
-#define MAX_REFERENCE_ANGLE M_PI/4 		// [rad] Maximal reference to follow to compensate perpendicular drift
+#define MAX_REFERENCE_ANGLE M_PI/4 		// [rad] Maximal reference to follow to compensate lateral drift
 
 //static systime_t dt = 0; 				// [us] time elapsed between each loop - Not used anymore.
 
 static float alpha_error = 0; 			// [rad] direction error
 static float last_alpha_error = 0; 		// [rad]
 static float initial_alpha_error = 0; 	// [rad]
-static float perpendicular_error = 0; 	// [cm] perpendicular position error
+static float lateral_error = 0; 		// [cm] lateral position error
 static float front_speed = 0; 			// [cm/s] speed toward the front of the e_puck
 static float w_z = 0; 					// [rad/s] rotational speed of the e_puck
 
@@ -73,7 +73,7 @@ void goTo(float direction, bool flag_new, int8_t lateral_distance)
 	{
 		initial_alpha_error = DEDTORAD(direction);
 		alpha_error = DEDTORAD(direction);
-		perpendicular_error = (float)lateral_distance/10; //[mm] to [cm]
+		lateral_error = (float)lateral_distance/10; //[mm] to [cm]
 
 		left_motor_set_pos(0); //reset motor step counter for orientation and position determination
 		right_motor_set_pos(0);
@@ -85,7 +85,7 @@ void goTo(float direction, bool flag_new, int8_t lateral_distance)
 	{
 		alpha_error = initial_alpha_error - rotation_calc();
 
-		perpendicular_error += sinf((alpha_error + last_alpha_error)/2) * front_speed_calc();
+		lateral_error += sinf((alpha_error + last_alpha_error)/2) * front_speed_calc();
 	}
 
 	compute_controls();
@@ -120,11 +120,11 @@ float get_actual_w_z(void)
 
 /*
 *	Computes how much the e_puck should rotate on its vertical axis and the desired front speed.
-*	We use reference_angle to compensate for perpendicular motion to the line going from e_puck to its destination.
+*	We use reference_angle to compensate for lateral motion to the line going from e_puck to its destination.
 */
 void compute_controls(void)
 {
-	float reference_angle = -Ki * perpendicular_error;	//[rad], new reference to follow
+	float reference_angle = -Ki * lateral_error;	//[rad], new reference to follow
 
 	if(fabsf(reference_angle) > MAX_REFERENCE_ANGLE) // Limit to the reference
 		reference_angle = MAX_REFERENCE_ANGLE * reference_angle / fabsf(reference_angle);
@@ -189,7 +189,7 @@ void actuate(void)
 }
 
 /*
-*	Computes the effective front speed without using dt.
+*	Computes the effective front speed without using dt, the time between each loop.
 */
 float front_speed_calc(void)
 {

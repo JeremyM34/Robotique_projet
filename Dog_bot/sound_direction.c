@@ -12,8 +12,6 @@
 
 #define PHASE_SAMPLES 				5		// mean of PHASE_SAMPLES values (amplitude) for more stability
 #define MIN_VALUE_THRESHOLD			8000 	// amplitude filtering below this value
-#define SCAN_FREQUENCY_NUM			32		// 500Hz
-#define SCAN_FREQUENCY				(SCAN_FREQUENCY_NUM * 15.625)
 #define FFT_SIZE 					1024
 #define MAX_TIME_BETWEEN_READING 	200 	// [ms]
 
@@ -33,7 +31,7 @@ static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 //Array of amplitudes for 4 mics to filter parasitic sound
 static float amps_in[4];
-static int order_in[4] = {0, 1, 2, 3}; //order of mics: Right(0), Left(1), Back(2), Front(3)
+static uint8_t order_in[4] = {0, 1, 2, 3}; //order of mics: Right(0), Left(1), Back(2), Front(3)
 //Array of amplitude values out of compare_amp for mic selection: Two medium amplitudes, and their corresponding mic number
 static float mid_amps[2];
 static int order_out[2];
@@ -102,7 +100,7 @@ int get_sound_angle(float* sound_direction){
 */
 static void processAudioData(int16_t *data, uint16_t num_samples){
 
-	if(got_new_direction_flag)	//starts a new angle measure when an old one has been acquired
+	if(got_new_direction_flag)	//reset new angle flag if the new direction was copied by dog_mode.c
 	{
 		new_angle_flag = 0;
 	}
@@ -171,14 +169,14 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 			if(value_input_time <= MAX_TIME_BETWEEN_READING)
 			{
 				//Copy of values for later use (mean value for amplitude, phase calculation for FFT)
-				FFT_tab[8*counter]=micRight_cmplx_input[2*SCAN_FREQUENCY_NUM];
-				FFT_tab[8*counter+1]=micRight_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
-				FFT_tab[8*counter+2]=micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM];
-				FFT_tab[8*counter+3]=micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
-				FFT_tab[8*counter+4]=micBack_cmplx_input[2*SCAN_FREQUENCY_NUM];
-				FFT_tab[8*counter+5]=micBack_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
-				FFT_tab[8*counter+6]=micFront_cmplx_input[2*SCAN_FREQUENCY_NUM];
-				FFT_tab[8*counter+7]=micFront_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*counter] = micRight_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*counter+1] = micRight_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*counter+2] = micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*counter+3] = micLeft_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*counter+4] = micBack_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*counter+5] = micBack_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
+				FFT_tab[8*counter+6] = micFront_cmplx_input[2*SCAN_FREQUENCY_NUM];
+				FFT_tab[8*counter+7] = micFront_cmplx_input[2*SCAN_FREQUENCY_NUM+1];
 
 				amp_tab[4*counter] = micRight_output[SCAN_FREQUENCY_NUM];
 				amp_tab[4*counter+1] = micLeft_output[SCAN_FREQUENCY_NUM];
@@ -196,24 +194,23 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 
 		if(counter == PHASE_SAMPLES)
 		{
-			for(int a=0; a<PHASE_SAMPLES; a++){
-
-				right_amp_average+=amp_tab[4*a]; //amplitude accumulation for each mic
-				left_amp_average+=amp_tab[4*a+1];
-				back_amp_average+=amp_tab[4*a+2];
-				front_amp_average+=amp_tab[4*a+3];
-
+			for(int a=0; a<PHASE_SAMPLES; a++)
+			{
+				right_amp_average += amp_tab[4*a]; //amplitude accumulation for each mic
+				left_amp_average += amp_tab[4*a+1];
+				back_amp_average += amp_tab[4*a+2];
+				front_amp_average += amp_tab[4*a+3];
 			}
 
-			right_amp_average/=PHASE_SAMPLES;
-			left_amp_average/=PHASE_SAMPLES;
-			back_amp_average/=PHASE_SAMPLES;
-			front_amp_average/=PHASE_SAMPLES;
+			right_amp_average /= PHASE_SAMPLES;
+			left_amp_average /= PHASE_SAMPLES;
+			back_amp_average /= PHASE_SAMPLES;
+			front_amp_average /= PHASE_SAMPLES;
 
-			amps_average[0]= right_amp_average;
-			amps_average[1]= left_amp_average;
-			amps_average[2]= back_amp_average;
-			amps_average[3]= front_amp_average;
+			amps_average[0] = right_amp_average;
+			amps_average[1] = left_amp_average;
+			amps_average[2] = back_amp_average;
+			amps_average[3] = front_amp_average;
 
 			//FUNCTION: finds the two mics to analyze (with 2nd and 3rd highest amplitudes) so that we don't compute values that are close to 90° from the front
 			//There is a loss of accuracy in angle calculation when the sound is coming from + or - 90° from the front of the robot
@@ -231,18 +228,16 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 			//We want the angle from the front of the robot to know how much to turn
 			mean_angle = angle_calcul(mean_phase, order_out[0]);
 
-			chprintf((BaseSequentialStream *)&SD3, "angle=%f\n\n", mean_angle);
+			//chprintf((BaseSequentialStream *)&SD3, "angle=%f\n\n", mean_angle);
 
 			//Reset of incremental values
 			counter=0;
 
 			mean_phase=0;
 
-			//Preparation to send new angle value
+			//New angle value has been computed
 			new_angle_flag = 1;
-
 			got_new_direction_flag = FALSE;
-
 		}
 
 		nb_samples = 0;
@@ -250,8 +245,8 @@ static void processAudioData(int16_t *data, uint16_t num_samples){
 	}
 }
 
-static void compare_amp(float* amplitude_input){
-
+static void compare_amp(float* amplitude_input)
+{
 	//for amplitude and mic order manipulation only
 	static float a=0;
 	static int b=0;
@@ -288,19 +283,19 @@ static void compare_amp(float* amplitude_input){
 		//LEFT and RIGHT both have the same area of contact so they are considered more reliable, therefore the default choice if the amplitudes from FRONT and BACK are inconsistent.
 		if(list_order[3]==0 || list_order[3]==1){
 
-			order_out[0]=order_in[2];
-			mid_amps[0]=amplitude_input[2]; // Medium amplitudes corresponding to the selected pair
-			order_out[1]=order_in[3];
-			mid_amps[1]=amplitude_input[3];
+			order_out[0] = order_in[2];
+			mid_amps[0] = amplitude_input[2]; // Medium amplitudes corresponding to the selected pair
+			order_out[1] = order_in[3];
+			mid_amps[1] = amplitude_input[3];
 			sec_amps[0] = amplitude_input[0]; //Highest and lowest amplitudes (unused pair)
 			sec_amps[1] = amplitude_input[1];
 
 		} else {		// if the double condition is not fulfilled, LEFT and RIGHT mics are selected
 
-			order_out[0]=order_in[0];
-			mid_amps[0]=amplitude_input[0];
-			order_out[1]=order_in[1];
-			mid_amps[1]=amplitude_input[1];
+			order_out[0] = order_in[0];
+			mid_amps[0] = amplitude_input[0];
+			order_out[1] = order_in[1];
+			mid_amps[1] = amplitude_input[1];
 			sec_amps[0] = amplitude_input[2];
 			sec_amps[1] = amplitude_input[3];
 
@@ -309,17 +304,18 @@ static void compare_amp(float* amplitude_input){
 
 	// LEFT and RIGHT mics are selected
 	else if((list_order[0]==2 || list_order[0]==3)&&(list_order[3]==2 || list_order[3]==3)){	//LEFT - RIGHT
-		order_out[0]=order_in[0]; 		//The medium amplitudes correspond to the selected mic pair
-		mid_amps[0]=amplitude_input[0];
-		order_out[1]=order_in[1];
-		mid_amps[1]=amplitude_input[1];
+		order_out[0] = order_in[0]; 		//The medium amplitudes correspond to the selected mic pair
+		mid_amps[0] = amplitude_input[0];
+		order_out[1] = order_in[1];
+		mid_amps[1] = amplitude_input[1];
 		sec_amps[0] = amplitude_input[2];	//The mic pair corresponding to the highest and lowest amplitudes will be used for the choice of formula for angle_calcul
 		sec_amps[1] = amplitude_input[3];
 	}
 }
 
 
-static float phase_calcul(uint8_t mic_selection, uint8_t position) {
+static float phase_calcul(uint8_t mic_selection, uint8_t position)
+{
 	float phase1;
 	float phase2;
 	float FFT_re1;
@@ -328,21 +324,21 @@ static float phase_calcul(uint8_t mic_selection, uint8_t position) {
 	float FFT_im2;
 
 	if(mic_selection==0){	// RIGHT - LEFT
-		FFT_re1= FFT_tab[8*position];		//Right
-		FFT_im1= FFT_tab[8*position+1];
-		FFT_re2= FFT_tab[8*position+2];	//Left
-		FFT_im2= FFT_tab[8*position+3];
+		FFT_re1 = FFT_tab[8*position];		//Right
+		FFT_im1 = FFT_tab[8*position+1];
+		FFT_re2 = FFT_tab[8*position+2];	//Left
+		FFT_im2 = FFT_tab[8*position+3];
 	} else {	  // BACK - FRONT
-		FFT_re1= FFT_tab[8*position+4];	//Back
-		FFT_im1= FFT_tab[8*position+5];
-		FFT_re2=	FFT_tab[8*position+6];	//Front
-		FFT_im2= FFT_tab[8*position+7];
+		FFT_re1 = FFT_tab[8*position+4];	//Back
+		FFT_im1 = FFT_tab[8*position+5];
+		FFT_re2 = FFT_tab[8*position+6];	//Front
+		FFT_im2 = FFT_tab[8*position+7];
 	}
 
-	phase1=atan2f(FFT_im1,FFT_re1);
-	phase2=atan2f(FFT_im2,FFT_re2);
+	phase1 = atan2f(FFT_im1,FFT_re1);
+	phase2 = atan2f(FFT_im2,FFT_re2);
 
-	float phase_shift=phase1-phase2; // [radians]
+	float phase_shift = phase1 - phase2; // [radians]
 
 	if((phase_shift > 5) || (phase_shift < -5)){ // replace improbable phase values by previous phase value
 		phase_shift = phase_old;
@@ -361,8 +357,8 @@ static void amp_filter(float* mic_amp_output)
 	}
 }
 
-static float angle_calcul(float phase_shift, uint8_t mic_selection) {
-
+static float angle_calcul(float phase_shift, uint8_t mic_selection)
+{
 	float angle=0;
 
 	//sinus of the angle in radians
